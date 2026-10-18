@@ -31,6 +31,7 @@ On-screen buttons are shown for touch devices.
 - **Vehicles:** Sports, Sedan, Van, Bike and the original Kaze R sport sedan.
 - **City life:** traffic that follows lanes and uses indicators, and pedestrians who flee and can be knocked over.
 - **World:** a city grid, a beach boardwalk, and an island with a lighthouse and bridge.
+- **Roads:** 18 m avenues and 22 m boulevards, sweeping coastal bends, rounded outer corners, and fewer intersections. Road markings, the minimap, collisions, and traffic lanes share the same paths.
 - **Day and night:**
   - The sky changes through the day, with sky reflections and soft shadows.
   - Windows and street lamps light up at night.

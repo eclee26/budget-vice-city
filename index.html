@@ -18,16 +18,44 @@ body{margin:0;background:var(--bg);color:var(--fg);overflow:hidden;font:13px san
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 
 <script>
-const T=10,N=48,R=Math.random,PI=Math.PI,m=[],hud=document.getElementById('h'),COLS=[],ROWS=[];let comp=null,fin=null,night=0;
-for(let i=11;i<N;i+=6)COLS.push(i);for(let j=0;j<N-1;j+=6)ROWS.push(j);ROWS.push(N-1);
+const T=10,N=48,R=Math.random,PI=Math.PI,m=[],hud=document.getElementById('h');let comp=null,fin=null,night=0;
+// A sparse road graph: long avenues, a winding coast, and rounded outer corners.
+// One sampled centerline owns the surface, collision mask, minimap and AI lanes.
+const ROAD={street:18,boulevard:22,bridge:14,sidewalk:2.2,asphalt:'#30343b',curb:'#b9b4aa',edge:'#eee9da',center:'#e8c35b'},nodes=[],roads=[];
+function junction(x,z){const n={x,z,links:[]};nodes.push(n);return n}
+function road(a,b,width=ROAD.street,controls=null){const points=[],steps=Math.ceil((Math.hypot(b.x-a.x,b.z-a.z)+(controls?100:0))/2);
+ for(let i=0;i<=steps;i++){const t=i/steps,u=1-t;points.push(controls?{x:u*u*u*a.x+3*u*u*t*controls[0]+3*u*t*t*controls[2]+t*t*t*b.x,z:u*u*u*a.z+3*u*u*t*controls[1]+3*u*t*t*controls[3]+t*t*t*b.z}:{x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t})}
+ const e={a,b,width,points};roads.push(e);a.links.push(e);b.links.push(e);return e}
+const north=[junction(150,35),junction(230,35),junction(340,35),junction(395,35)],
+ upper=[junction(115,165),junction(230,165),junction(340,165),junction(435,165)],
+ lower=[junction(135,300),junction(230,300),junction(340,300),junction(435,300)],
+ south=[junction(160,435),junction(230,435),junction(340,435),junction(395,435)],coastBridge=junction(122,245),islandEnd=junction(15,245);
+for(const row of[north,south])for(let i=0;i<3;i++)road(row[i],row[i+1],ROAD.boulevard);
+const coastStart=road(north[0],upper[0],ROAD.boulevard,[90,35,95,110]);
+road(upper[0],coastBridge,ROAD.boulevard,[145,190,100,220]);
+road(coastBridge,lower[0],ROAD.boulevard,[145,260,120,285]);
+road(lower[0],south[0],ROAD.boulevard,[175,350,95,435]);
+road(north[3],upper[3],ROAD.boulevard,[435,35,435,110]);
+road(upper[3],lower[3],ROAD.boulevard);
+road(lower[3],south[3],ROAD.boulevard,[435,355,445,435]);
+for(let i=1;i<=2;i++){road(north[i],upper[i]);road(upper[i],lower[i]);road(lower[i],south[i])}
+for(let i=0;i<3;i++)road(upper[i],upper[i+1]);
+// The missing middle cross street makes two T-junctions and a longer city block.
+road(lower[0],lower[1]);road(lower[2],lower[3]);road(islandEnd,coastBridge,ROAD.bridge);
+function traceRoad(c,e,scale=1,offset=0){c.beginPath();e.points.forEach((p,i)=>{const a=e.points[Math.max(0,i-1)],b=e.points[Math.min(e.points.length-1,i+1)],d=Math.hypot(b.x-a.x,b.z-a.z)||1,x=(p.x-(b.z-a.z)/d*offset)*scale,z=(p.z+(b.x-a.x)/d*offset)*scale;i?c.lineTo(x,z):c.moveTo(x,z)})}
+const WORLD=N*T,roadMask=document.createElement('canvas');roadMask.width=roadMask.height=WORLD;
+const rc=roadMask.getContext('2d',{willReadFrequently:true});rc.lineCap=rc.lineJoin='round';
+function mask(extra){rc.clearRect(0,0,WORLD,WORLD);rc.strokeStyle='#fff';for(const e of roads){rc.lineWidth=e.width+extra*2;traceRoad(rc,e);rc.stroke()}return rc.getImageData(0,0,WORLD,WORLD).data}
+const asphaltMask=mask(0),sidewalkMask=mask(ROAD.sidewalk),clearanceMask=mask(ROAD.sidewalk+T*.71);
+const inMask=(data,x,z)=>x>=0&&z>=0&&x<WORLD&&z<WORLD&&data[(Math.floor(z)*WORLD+Math.floor(x))*4+3]>127;
 // map: 0 grass,1 road,2 building,3 sand,4 water,5 boardwalk,6 landmark
 for(let j=0;j<N;j++){m[j]=[];for(let i=0;i<N;i++){let v;
  if(i<6)v=i<4&&j>=18&&j<=30?(i==0||i==3||j==18||j==30?3:0):4;
- else if(i<8)v=3;else if(i==8)v=5;
- else v=COLS.includes(i)||ROWS.includes(j)?1:R()<.5?2:0;
- if(j==24&&i<9)v=1;m[j][i]=v}}
+ else if(i<8)v=3;else if(i==8)v=5;else v=R()<.5?2:0;
+ if(v==2&&inMask(clearanceMask,(i+.5)*T,(j+.5)*T))v=0;m[j][i]=v}}
 m[20][1]=6;
-const tile=(px,pz)=>{const i=Math.floor(px/T),j=Math.floor(pz/T);return i<0||j<0||i>=N||j>=N?4:m[j][i]},solid=(a,b)=>{const t=tile(a,b);return t==2||t==4||t==6};
+const tile=(px,pz)=>{const i=Math.floor(px/T),j=Math.floor(pz/T);if(i<0||j<0||i>=N||j>=N)return 4;
+ if(inMask(asphaltMask,px,pz))return 1;if(inMask(sidewalkMask,px,pz))return 0;return m[j][i]},solid=(a,b)=>{const t=tile(a,b);return t==2||t==4||t==6};
 // scene
 const S=new THREE.Scene();S.background=new THREE.Color('#e9b98f');S.fog=new THREE.Fog('#e9b98f',90,420);
 const cam=new THREE.PerspectiveCamera(65,1,.1,1000),r=new THREE.WebGLRenderer({antialias:true});document.body.prepend(r.domElement);
@@ -43,15 +71,22 @@ const carMat=c=>mc['car'+c]||(mc['car'+c]=new THREE.MeshPhysicalMaterial({color:
 const GLASS=new THREE.MeshPhysicalMaterial({color:lin('#0b1a24'),metalness:.9,roughness:.05}),RUB=new THREE.MeshStandardMaterial({color:lin('#151515'),roughness:.9});
 function bx(c,sx,sy,sz,x,y,z,par=S){const b=new THREE.Mesh(box,typeof c=='string'?mat(c):c);b.scale.set(sx,sy,sz);b.position.set(x,y,z);b.castShadow=b.receiveShadow=true;par.add(b);return b}
 // ground
-const Q=32,gc=document.createElement('canvas');gc.width=gc.height=N*Q;const g=gc.getContext('2d'),isR=(i,j)=>m[j]&&m[j][i]==1;
-const base=['#4f7f3a','#2e2e33','#6e6a64','#e3cf9a','#1b6f8f','#9c6b3e','#4f7f3a'];
+const Q=32,gc=document.createElement('canvas');gc.width=gc.height=N*Q;const g=gc.getContext('2d'),GS=Q/T;
+const base=['#4f7f3a',ROAD.asphalt,'#6e6a64','#e3cf9a','#1b6f8f','#9c6b3e','#4f7f3a'];
 for(let j=0;j<N;j++)for(let i=0;i<N;i++){const t=m[j][i],X=i*Q,Y=j*Q;g.fillStyle=base[t];g.fillRect(X,Y,Q,Q);
  for(let n=0;n<40;n++){g.fillStyle=`rgba(${R()<.5?'0,0,0':'255,255,255'},${R()*.08})`;g.fillRect(X+R()*Q,Y+R()*Q,1+R()*3,1+R()*3)}
- if(t==5){g.fillStyle='#6e4526';for(let y=0;y<Q;y+=4)g.fillRect(X,Y+y,Q,1)}
- if(t==1){const v=COLS.includes(i),h=ROWS.includes(j)||j==24;g.fillStyle='#e8e2c8';
-  if(v&&!h){g.fillRect(X+15,Y+3,2,10);g.fillRect(X+15,Y+19,2,10)}if(h&&!v){g.fillRect(X+3,Y+15,10,2);g.fillRect(X+19,Y+15,10,2)}
-  g.fillStyle='#9a978f';if(!isR(i-1,j))g.fillRect(X,Y,2,Q);if(!isR(i+1,j))g.fillRect(X+Q-2,Y,2,Q);if(!isR(i,j-1))g.fillRect(X,Y,Q,2);if(!isR(i,j+1))g.fillRect(X,Y+Q-2,Q,2)}
- else if(t==0||t==2){g.fillStyle='#b9b4aa';if(isR(i-1,j))g.fillRect(X,Y,6,Q);if(isR(i+1,j))g.fillRect(X+Q-6,Y,6,Q);if(isR(i,j-1))g.fillRect(X,Y,Q,6);if(isR(i,j+1))g.fillRect(X,Y+Q-6,Q,6)}}
+ if(t==5){g.fillStyle='#6e4526';for(let y=0;y<Q;y+=4)g.fillRect(X,Y+y,Q,1)}}
+g.lineCap=g.lineJoin='round';
+// Draw all sidewalks first so a joining street never cuts across another's asphalt.
+for(const[extra,color]of[[ROAD.sidewalk*2,ROAD.curb],[0,ROAD.asphalt]])for(const e of roads){g.strokeStyle=color;g.lineWidth=(e.width+extra)*GS;traceRoad(g,e,GS);g.stroke()}
+const markings=document.createElement('canvas');markings.width=markings.height=gc.width;const mg=markings.getContext('2d');mg.lineJoin='round';
+for(const e of roads){
+ for(const offset of[-e.width/2+.65,e.width/2-.65]){mg.strokeStyle=ROAD.edge;mg.lineWidth=.16*GS;traceRoad(mg,e,GS,offset);mg.stroke()}
+ for(const offset of[-.22,.22]){mg.strokeStyle=ROAD.center;mg.lineWidth=.14*GS;traceRoad(mg,e,GS,offset);mg.stroke()}
+ if(e.width==ROAD.boulevard){mg.strokeStyle=ROAD.edge;mg.lineWidth=.13*GS;mg.setLineDash([3*GS,5*GS]);for(const offset of[-e.width/4,e.width/4]){traceRoad(mg,e,GS,offset);mg.stroke()}mg.setLineDash([])}}
+// Keep junctions clear, including the island's turning area.
+mg.globalCompositeOperation='destination-out';for(const n of nodes)if(n.links.length!=2){mg.beginPath();mg.arc(n.x*GS,n.z*GS,(Math.max(...n.links.map(e=>e.width))*.78)*GS,0,PI*2);mg.fill()}
+g.drawImage(markings,0,0);
 const tx=new THREE.CanvasTexture(gc);tx.encoding=THREE.sRGBEncoding;tx.anisotropy=r.capabilities.getMaxAnisotropy();
 const gr=new THREE.Mesh(new THREE.PlaneGeometry(N*T,N*T).rotateX(-PI/2),new THREE.MeshStandardMaterial({map:tx,roughness:.9}));gr.position.set(N*T/2,0,N*T/2);gr.receiveShadow=true;S.add(gr);
 const sea=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000).rotateX(-PI/2),new THREE.MeshStandardMaterial({color:lin('#1b6f8f'),roughness:.06,metalness:.3}));sea.position.y=-.1;S.add(sea);
@@ -67,7 +102,7 @@ function bMat(c,f){const id=c+f;if(!bm[id]){const t=wt.clone();t.needsUpdate=tru
 const palms=[];
 for(let j=0;j<N;j++)for(let i=0;i<N;i++){const t=m[j][i],cx=(i+.5)*T,cz=(j+.5)*T;
  if(t==2){const f=2+(R()*R()*9|0),h=f*4,c=pal[R()*6|0];bx(bMat(c,f),T-1,h,T-1,cx,h/2,cz);bx(roof,T-.4,.6,T-.4,cx,h+.3,cz);if(R()<.3)bx(neon[R()*3|0],T-.5,.4,T-.5,cx,4*(1+(R()*(f-1)|0)),cz).castShadow=false}
- else if((t==0||t==3)&&R()<.14)palms.push([cx+(R()-.5)*4,cz+(R()-.5)*4])}
+ else if((t==0||t==3)&&!inMask(clearanceMask,cx,cz)&&R()<.14)palms.push([cx+(R()-.5)*4,cz+(R()-.5)*4])}
 const WIND={value:0},frMat=new THREE.MeshStandardMaterial({color:lin('#3f7a2c'),roughness:.8,side:2});
 frMat.onBeforeCompile=sh=>{sh.uniforms.uTime=WIND;sh.vertexShader='uniform float uTime;\n'+sh.vertexShader.replace('#include <project_vertex>',`vec4 mvPosition=vec4(transformed,1.0);
 #ifdef USE_INSTANCING
@@ -82,11 +117,12 @@ mvPosition=modelViewMatrix*mvPosition;gl_Position=projectionMatrix*mvPosition;`)
    C.compose(new THREE.Vector3(1.8,-.3,0),q.setFromEuler(e.set(0,0,-.35-R()*.2)),new THREE.Vector3(3.8,.06,.9));fr.setMatrixAt(n*7+f,M.multiply(C))}});
  tr.castShadow=fr.castShadow=true;S.add(tr,fr)}
 // landmarks: bridge rails, lighthouse, boardwalk lamps
-for(const z of[24*T+.3,25*T-.3]){bx('#ddd',9*T,1,.3,4.5*T,.5,z);for(let x=T;x<9*T;x+=T*1.5)bx('#bbb',.8,4,.8,x,-1.5,z)}
+for(const z of[245-ROAD.bridge/2-.5,245+ROAD.bridge/2+.5]){bx('#ddd',80,1,.3,55,.5,z);for(let x=20;x<90;x+=15)bx('#bbb',.8,4,.8,x,-1.5,z)}
 const lh=new THREE.Mesh(new THREE.CylinderGeometry(1.6,2.2,16,10),mat('#fff'));lh.position.set(1.5*T,8,20.5*T);lh.castShadow=true;S.add(lh);
 const lt=new THREE.Mesh(new THREE.CylinderGeometry(1.8,1.8,2.5,10),mat('#e33'));lt.position.set(1.5*T,17,20.5*T);S.add(lt);
 const lampC=lin('#ffd9a0'),lampMat=new THREE.MeshBasicMaterial({color:lampC.clone(),toneMapped:false}),lamps=[];
-for(let j=2;j<N;j+=4)lamps.push([8.5*T,j*T]);for(const c of COLS)for(const rw of ROWS)lamps.push([c*T-.3,rw*T-.3]);
+for(let j=2;j<N;j+=4)if(!inMask(sidewalkMask,8.5*T,j*T))lamps.push([8.5*T,j*T]);
+for(const e of roads)if(e.width!=ROAD.bridge)for(let i=12;i<e.points.length-6;i+=18){const p=e.points[i],a=e.points[i-1],b=e.points[i+1],d=Math.hypot(b.x-a.x,b.z-a.z),off=e.width/2+1.4;for(const side of[-1,1]){const x=p.x-(b.z-a.z)/d*off*side,z=p.z+(b.x-a.x)/d*off*side;if(!inMask(asphaltMask,x,z)&&tile(x,z)!=4)lamps.push([x,z])}}
 const gcv=document.createElement('canvas');gcv.width=gcv.height=64;{const c=gcv.getContext('2d'),gd=c.createRadialGradient(32,32,0,32,32,32);gd.addColorStop(0,'rgba(255,255,255,1)');gd.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=gd;c.fillRect(0,0,64,64)}
 const ptex=new THREE.CanvasTexture(gcv),glowMat=new THREE.MeshBasicMaterial({map:ptex,color:lin('#ffcf8a'),transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false});
 {const po=new THREE.InstancedMesh(box,mat('#2a2a2a'),lamps.length),he=new THREE.InstancedMesh(box,lampMat,lamps.length),gl=new THREE.InstancedMesh(new THREE.PlaneGeometry(12,12).rotateX(-PI/2),glowMat,lamps.length),M=new THREE.Matrix4();
@@ -123,19 +159,31 @@ function mkCar(n){const t=TY[n],o=new THREE.Group(),col=['#e33','#fd0','#0cf','#
  for(const s of[-1,1])for(const x of[t.L/2+.01,-t.L/2-.01]){const b=lb(ambMat,.07,.09,.14,x,y+(x>0?.14:-.1),s*(t.W/2-.08));b.side_=s;b.visible=false;v.il.push(b)}
  cars.push(v);return v}
 const types=Object.keys(TY),rt=()=>types[R()*4|0];
-for(let c=0;c<10;){const i=9+(R()*(N-9)|0),j=R()*N|0;if(m[j][i]==1){const v=mkCar(rt());v.x=(i+.5)*T;v.z=(j+.5)*T;v.a=R()*6.28;c++}}
-{const v=mkCar('Kaze R');v.x=11.5*T+2.5;v.z=5.5*T;v.a=PI/2}
-// traffic AI: drives node to node on the road grid, right-hand lane
-function nextNode(v){const A=v.ai,ds=[[1,0],[0,1],[-1,0],[0,-1]].filter(([dx,dz])=>!(dx==-A.dx&&dz==-A.dz)&&COLS[A.ci+dx]!=null&&ROWS[A.rj+dz]!=null),
- [dx,dz]=ds.length?ds[R()*ds.length|0]:[-A.dx,-A.dz];v.ind=Math.sign((A.dx||0)*dz-(A.dz||0)*dx)||0;A.dx=dx;A.dz=dz;A.ci+=dx;A.rj+=dz}
-function spawnAI(v){v.ai={ci:R()*COLS.length|0,rj:R()*ROWS.length|0,stk:0};v.x=(COLS[v.ai.ci]+.5)*T;v.z=(ROWS[v.ai.rj]+.5)*T;nextNode(v);v.a=Math.atan2(v.ai.dz,v.ai.dx);v.vx=v.vz=0;v.yr=0;v.g=1}
+function lanePoint(e,i,dir=1,offset=null){const p=e.points[i],a=e.points[Math.max(0,i-1)],b=e.points[Math.min(e.points.length-1,i+1)],d=Math.hypot(b.x-a.x,b.z-a.z)||1,l=offset==null?(e.width==ROAD.boulevard?e.width*.34:e.width*.25):offset;
+ return{x:p.x-(b.z-a.z)/d*l*dir,z:p.z+(b.x-a.x)/d*l*dir,a:Math.atan2((b.z-a.z)*dir,(b.x-a.x)*dir)}}
+const start=lanePoint(coastStart,22,1,8.5);
+for(let c=0;c<10;c++){const e=roads[1+(R()*(roads.length-2)|0)],i=8+(R()*(e.points.length-16)|0),p=lanePoint(e,i,1,e.width/2-1.8),v=mkCar(rt());v.x=p.x;v.z=p.z;v.a=p.a}
+{const v=mkCar('Kaze R');v.x=start.x;v.z=start.z;v.a=start.a}
+// Follow the same sampled curves as the road texture, in right-hand lanes.
+function driveLane(e,dir){const path=e.points.map((_,i)=>lanePoint(e,i,dir));if(dir<0)path.reverse();
+ const from=dir>0?e.a:e.b,to=dir>0?e.b:e.a,trim=n=>n.links.length==1?7:12;
+ while(path.length>2&&Math.hypot(path[0].x-from.x,path[0].z-from.z)<trim(from))path.shift();
+ while(path.length>2&&Math.hypot(path[path.length-1].x-to.x,path[path.length-1].z-to.z)<trim(to))path.pop();return path}
+function nextRoad(v){const A=v.ai,n=A.dir>0?A.e.b:A.e.a,choices=n.links.filter(e=>e!=A.e),e=choices.length?choices[R()*choices.length|0]:A.e,dir=e.a==n?1:-1,path=driveLane(e,dir),a=A.path[A.path.length-1],b=path[0],join=[],reach=Math.min(12,Math.hypot(b.x-a.x,b.z-a.z)*.65);
+ // Cubic lane connectors round each turn instead of aiming at a square node.
+ for(let i=1;i<=18;i++){const t=i/18,u=1-t;join.push({x:u*u*u*a.x+3*u*u*t*(a.x+Math.cos(a.a)*reach)+3*u*t*t*(b.x-Math.cos(b.a)*reach)+t*t*t*b.x,z:u*u*u*a.z+3*u*u*t*(a.z+Math.sin(a.a)*reach)+3*u*t*t*(b.z-Math.sin(b.a)*reach)+t*t*t*b.z})}
+ v.ind=Math.sign(Math.sin(b.a-v.a));A.e=e;A.dir=dir;A.path=join.concat(path);A.i=0}
+function spawnAI(v){const e=roads[R()*roads.length|0],dir=R()<.5?1:-1,path=driveLane(e,dir),i=R()*path.length|0,p=path[i];
+ v.ai={e,dir,path,i,stk:0};v.x=p.x;v.z=p.z;v.a=p.a;v.vx=v.vz=0;v.yr=0;v.g=1}
 for(let c=0;c<14;c++)spawnAI(mkCar(types[R()*3|0]));
-function aiDrive(v){const A=v.ai,tx=(COLS[A.ci]+.5)*T-A.dz*2.5,tz=(ROWS[A.rj]+.5)*T+A.dx*2.5,dx=tx-v.x,dz=tz-v.z,dist=Math.hypot(dx,dz);
- if(dist<3.5)nextNode(v);
- let da=Math.atan2(dz,dx)-v.a;da=Math.atan2(Math.sin(da),Math.cos(da));if(Math.abs(da)<.08&&dist>10)v.ind=0;
- const sp=Math.hypot(v.vx,v.vz),fx=Math.cos(v.a),fz=Math.sin(v.a);let blk=0;
- for(const o of obs)if(o!=v&&!o.dn){const rx=o.x-v.x,rz=o.z-v.z,ah=rx*fx+rz*fz;if(ah>0&&ah<9+sp*1.2&&Math.abs(rz*fx-rx*fz)<2.2){blk=1;break}}
- const cr=dist<16||Math.abs(da)>.4?6:12;
+function aiDrive(v){const A=v.ai,sp=Math.hypot(v.vx,v.vz),look=4+sp*.35;let target;
+ // Consume nearby waypoints across a smoothed junction connector.
+ for(let n=0;n<32;n++){target=A.path[A.i];if(Math.hypot(target.x-v.x,target.z-v.z)>look)break;
+ if(A.i==A.path.length-1)nextRoad(v);else A.i++}
+ target=A.path[A.i];let da=Math.atan2(target.z-v.z,target.x-v.x)-v.a;da=Math.atan2(Math.sin(da),Math.cos(da));if(Math.abs(da)<.08)v.ind=0;
+ const fx=Math.cos(v.a),fz=Math.sin(v.a);let blk=0;
+ for(const o of obs)if(o!=v&&!o.dn){const rx=o.x-v.x,rz=o.z-v.z,ah=rx*fx+rz*fz;if(ah>0&&ah<7+sp*.8&&Math.abs(rz*fx-rx*fz)<2.2){blk=1;break}}
+ const end=A.dir>0?A.e.b:A.e.a,near=Math.hypot(end.x-v.x,end.z-v.z)<18,cr=near||Math.abs(da)>.3?6:12;
  phys(v,!blk&&sp<cr?.6:0,blk||sp>cr+1.5?1:0,Math.max(-1,Math.min(1,da*2.5)),0);
  A.stk=sp<.4?A.stk+1:0;if(A.stk>(blk?900:200))spawnAI(v)}
 // humans: jointed low-poly people (hips/knees/shoulders/elbows) with walk & run cycles
@@ -159,12 +207,12 @@ function anim(H,ph,amp,run,air){const s=Math.sin(ph);
  H.tor.rotation.z=-(run?.22:.04)*Math.min(1,amp*1.5);H.body.position.y=Math.abs(Math.cos(ph))*.04*amp;H.tor.scale.y=1+Math.sin(Date.now()/600)*.006}
 // pedestrians
 const peds=[];
-function walkSpot(){for(;;){const i=R()*N|0,j=R()*N|0,t=m[j][i];if(t==0||t==3||t==5)return[(i+.5)*T,(j+.5)*T]}}
+function walkSpot(){for(;;){const i=R()*N|0,j=R()*N|0,t=tile((i+.5)*T,(j+.5)*T);if(t==0||t==3||t==5)return[(i+.5)*T,(j+.5)*T]}}
 function mkPed(x,z){const H=mkHuman({skin:pk(SK),hair:pk(HR),shirt:pk(SH),pants:pk(PN),shoe:pk(['#222','#eee','#6b4a2b']),long:R()<.4,h:.9+R()*.18});
  const p={x,z,a:R()*6.28,o:H.g,H,dn:0,fl:0,vx:0,vz:0,ph:R()*9};peds.push(p);return p}
 for(let c=0;c<32;c++)mkPed(...walkSpot());
 // player
-const PH=mkHuman({skin:'#e0ac85',hair:'#1b1410',shirt:'#1f8fa8',pants:'#2b3a55',shoe:'#eee',shades:1,h:1.05}),P={x:11.5*T,z:3.5*T,a:0,vx:0,vz:0,vy:0,y:0,ph:0,o:PH.g,H:PH};
+const PH=mkHuman({skin:'#e0ac85',hair:'#1b1410',shirt:'#1f8fa8',pants:'#2b3a55',shoe:'#eee',shades:1,h:1.05}),P={x:start.x-Math.cos(start.a)*5,z:start.z-Math.sin(start.a)*5,a:start.a,vx:0,vz:0,vy:0,y:0,ph:0,o:PH.g,H:PH};
 // input + mouse camera
 let car=null,camMode=0,yo=0,pt=.2,zm=1,drag=0,lx=0,ly=0,idle=0;const k={},key=e=>({arrowup:'w',arrowdown:'s',arrowleft:'a',arrowright:'d',f:'e'}[e.key.toLowerCase()]||e.key.toLowerCase());
 onkeydown=e=>{const n=key(e);if(n=='e'&&!k.e)act();if(n=='c'&&!k.c)cyc();k[n]=1};onkeyup=e=>k[key(e)]=0;
