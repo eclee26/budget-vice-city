@@ -3,7 +3,7 @@
 :root{--bg:#111;--fg:#fff8eb;--panel:rgba(12,20,30,.9);--muted:#b7c8d0;--accent:#76e4e1;--warning:#ffd38a;--danger:#ff828d;--line:rgba(255,248,235,.2);--radius:12px;--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);overflow:hidden;font:13px system-ui,sans-serif}canvas{display:block;touch-action:none}#world{position:fixed;inset:0;width:100%;height:100%}button{font:inherit;color:inherit;cursor:pointer}button:focus-visible{outline:3px solid var(--accent);outline-offset:4px}button:disabled{opacity:.4;cursor:default}[hidden]{display:none!important}
 #h{position:fixed;top:calc(12px + var(--safe-top));left:max(12px,env(safe-area-inset-left));width:224px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px;pointer-events:none}
-.hud-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.eyebrow{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700}.help-button{pointer-events:auto;border:1px solid var(--line);background:transparent;border-radius:8px;min-width:44px;min-height:44px;font-size:12px}.help-button:hover{background:#ffffff15}
+.hud-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.eyebrow{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700}.help-button{pointer-events:auto;border:1px solid var(--line);background:transparent;border-radius:8px;min-width:44px;min-height:44px;font-size:12px}.help-button:hover{background:#ffffff15}#sound-toggle{min-height:44px}.sound-button{position:fixed;right:calc(18px + env(safe-area-inset-right));top:calc(176px + var(--safe-top));background:var(--panel);z-index:11;padding:0 10px}@media(max-width:600px){.sound-button{top:calc(138px + var(--safe-top))}}@media(max-height:500px){.sound-button{top:calc(124px + var(--safe-top))}}
 #vehicle-name{margin-top:6px;font-size:14px;font-weight:600;line-height:1.35;overflow-wrap:break-word}.speed-row{display:flex;align-items:center;justify-content:space-between;margin:6px 0 12px}.speed-value{font-size:54px;font-weight:650;letter-spacing:-.06em;line-height:1;font-variant-numeric:tabular-nums}.unit{font-size:10px;color:var(--muted);margin-left:7px;letter-spacing:.08em}.gear{text-align:center;min-width:40px;border-left:1px solid var(--line);padding-left:12px}.gear small{display:block;color:var(--muted);font-size:9px;letter-spacing:.1em}.gear span{font-size:26px;color:var(--accent);font-variant-numeric:tabular-nums}.condition-label{display:flex;justify-content:space-between;gap:6px;font-size:10px;color:var(--muted);margin-bottom:6px}#condition-value{color:var(--fg);font-variant-numeric:tabular-nums}#condition-bar{display:block;width:100%;height:5px;appearance:none;border:0;border-radius:4px;overflow:hidden;background:#ffffff24;accent-color:var(--accent)}#condition-bar::-webkit-progress-bar{background:#ffffff24}#condition-bar::-webkit-progress-value{background:var(--condition-color,var(--accent))}#condition-bar::-moz-progress-bar{background:var(--condition-color,var(--accent))}#vehicle-hud[data-condition="warning"]{--condition-color:var(--warning)}#vehicle-hud[data-condition="critical"]{--condition-color:var(--danger)}#engine-status{color:var(--muted);font-size:10px;margin-top:8px;font-variant-numeric:tabular-nums}#foot-hint{margin:8px 0 0;color:var(--muted);font-size:11px;line-height:1.5}
 #mm{position:fixed;top:calc(12px + var(--safe-top));right:max(12px,env(safe-area-inset-right));width:150px;height:150px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
 #t{display:none;position:fixed;inset:0;pointer-events:none;user-select:none;-webkit-user-select:none}.touch-enabled #t{display:block}#t button{pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}
@@ -16,9 +16,10 @@
 </style></head>
 <body>
 <section id="h" aria-label="Player information"><div class="hud-top"><span id="travel-mode" class="eyebrow">On foot</span><button id="help-open" class="help-button" aria-haspopup="dialog" aria-controls="controls-help" title="Controls (H)">Help</button></div><p id="foot-hint">Explore the coast.<br>Find a car and take a drive.</p><div id="vehicle-hud" hidden><div id="vehicle-name"></div><div class="speed-row"><div><span id="speed-value" class="speed-value">0</span><span class="unit">MPH</span></div><div class="gear"><small>GEAR</small><span id="gear-value">1</span></div></div><div class="condition-label"><span id="condition-label">Vehicle condition</span><span id="condition-value">100%</span></div><progress id="condition-bar" max="100" value="100" aria-label="Vehicle condition">100%</progress><div id="engine-status">900 RPM</div></div></section>
+<button id="sound-toggle" class="help-button sound-button" aria-label="Mute sound" aria-pressed="false" title="Mute sound (M)">Sound on</button>
 <canvas id="mm" width="150" height="150" aria-label="City minimap"></canvas>
 <div id="t" aria-label="Touch game controls"><button id="stick" aria-label="Movement and steering thumbstick. Arrow keys also work."><span id="stick-knob"></span><span id="stick-label">MOVE</span></button><div id="touch-actions"><button id="camera-control" class="control-button" aria-label="Change camera view">Camera</button><button id="jump-control" class="control-button" data-hold=" " aria-label="Jump">Jump</button><button id="enter-control" class="control-button" aria-label="Enter nearby car">Drive</button></div><div id="pedals"><button id="brake" class="pedal" data-hold="s" aria-label="Brake. Hold when stopped to reverse.">BRAKE<small>Hold to reverse</small></button><button id="accelerator" class="pedal" data-hold="w" aria-label="Accelerate">GAS<span aria-hidden="true">▲</span></button></div></div>
-<dialog id="controls-help" aria-labelledby="help-title"><div class="dialog-header"><div><span class="eyebrow">Game paused</span><h1 id="help-title">Controls</h1></div><button id="help-close" class="close-help" aria-label="Close controls help" autofocus>×</button></div><dl class="control-list"><dt>Walk / drive</dt><dd><kbd>W S</kbd> or <kbd>↑ ↓</kbd></dd><dt>Turn / steer</dt><dd><kbd>A D</kbd> or <kbd>← →</kbd></dd><dt>Run on foot</dt><dd><kbd>Shift</kbd></dd><dt>Jump / handbrake</dt><dd><kbd>Space</kbd></dd><dt>Enter / exit car</dt><dd><kbd>E</kbd> or <kbd>F</kbd></dd><dt>Camera view</dt><dd><kbd>C</kbd></dd><dt>Look around</dt><dd>Drag the view</dd><dt>Zoom</dt><dd>Mouse wheel</dd><dt>Open help</dt><dd><kbd>H</kbd></dd></dl><p class="help-note">Stop the car before getting out. Hold the brake at a standstill to select reverse; hold the accelerator at a standstill to return to forward gear.</p><p class="help-note touch-help">On foot, use the left thumbstick to move; push farther to run. In a car, move it left or right to steer, then use GAS and BRAKE separately. Drag the open view with another finger to look around.</p></dialog>
+<dialog id="controls-help" aria-labelledby="help-title"><div class="dialog-header"><div><span class="eyebrow">Game paused</span><h1 id="help-title">Controls</h1></div><button id="help-close" class="close-help" aria-label="Close controls help" autofocus>×</button></div><dl class="control-list"><dt>Walk / drive</dt><dd><kbd>W S</kbd> or <kbd>↑ ↓</kbd></dd><dt>Turn / steer</dt><dd><kbd>A D</kbd> or <kbd>← →</kbd></dd><dt>Run on foot</dt><dd><kbd>Shift</kbd></dd><dt>Jump / handbrake</dt><dd><kbd>Space</kbd></dd><dt>Enter / exit car</dt><dd><kbd>E</kbd> or <kbd>F</kbd></dd><dt>Camera view</dt><dd><kbd>C</kbd></dd><dt>Look around</dt><dd>Drag the view</dd><dt>Zoom</dt><dd>Mouse wheel</dd><dt>Mute / unmute</dt><dd><kbd>M</kbd> or Sound button</dd><dt>Open help</dt><dd><kbd>H</kbd></dd></dl><p class="help-note">Stop the car before getting out. Hold the brake at a standstill to select reverse; hold the accelerator at a standstill to return to forward gear.</p><p class="help-note touch-help">On foot, use the left thumbstick to move; push farther to run. In a car, move it left or right to steer, then use GAS and BRAKE separately. Drag the open view with another finger to look around.</p></dialog>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/objects/Sky.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
@@ -387,14 +388,57 @@ const PH=mkHuman({skin:'#e0ac85',hair:'#1b1410',shirt:'#1f8fa8',pants:'#2b3a55',
 let car=null,camMode=0,yo=0,pt=.2,zm=1,drag=0,lx=0,ly=0,idle=0,cameraPointer=null;
 const k={},held=new Map(),touch={x:0,y:0,id:null},key=e=>({arrowup:'w',arrowdown:'s',arrowleft:'a',arrowright:'d',f:'e'}[e.key.toLowerCase()]||e.key.toLowerCase()),pressed=n=>!!k[n]||[...held.values()].includes(n),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const help=document.getElementById('controls-help'),helpOpen=document.getElementById('help-open'),stick=document.getElementById('stick'),knob=document.getElementById('stick-knob'),touchButtons=[...document.querySelectorAll('[data-hold]')];
+// One lazy Web Audio graph: no downloads or autoplay before a user gesture.
+class GameAudio{
+ constructor(){this.ctx=null;this.muted=false;this.focused=true;this.voices=0;this.lastImpact=-1;try{this.muted=localStorage.getItem('bvc-muted')==='1'}catch{}this.button=document.getElementById('sound-toggle');this.button.onclick=()=>this.toggle();this.label()}
+ label(){this.button.textContent=this.muted?'Sound off':'Sound on';this.button.setAttribute('aria-pressed',String(this.muted));this.button.setAttribute('aria-label',this.muted?'Unmute sound':'Mute sound');this.button.title=(this.muted?'Unmute':'Mute')+' sound (M)'}
+ toggle(){this.muted=!this.muted;try{localStorage.setItem('bvc-muted',this.muted?'1':'0')}catch{}this.label();this.update()}
+ ramp(param,value,time=.06){param.setTargetAtTime(value,this.ctx.currentTime,time)}
+ unlock(){
+  if(!this.ctx){const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio){this.button.disabled=true;this.button.textContent='No audio';return}
+   try{const c=this.ctx=new Audio();this.master=c.createGain();this.master.gain.value=0;
+    const limiter=c.createDynamicsCompressor();limiter.threshold.value=-12;limiter.knee.value=12;limiter.ratio.value=8;limiter.attack.value=.003;limiter.release.value=.15;
+    this.master.connect(limiter);limiter.connect(c.destination);
+    this.noise=c.createBuffer(1,c.sampleRate*2,c.sampleRate);const samples=this.noise.getChannelData(0);for(let i=0;i<samples.length;i++)samples[i]=Math.random()*2-1;
+    this.engine=c.createGain();this.engine.gain.value=0;const exhaust=c.createBiquadFilter();exhaust.type='lowpass';exhaust.frequency.value=1600;this.engine.connect(exhaust);exhaust.connect(this.master);
+    this.tones=[1,2,.5].map((ratio,i)=>{const osc=c.createOscillator(),gain=c.createGain();osc.type=i===0?'sawtooth':'triangle';osc.frequency.value=30;gain.gain.value=[.5,.22,.35][i];osc.connect(gain);gain.connect(this.engine);osc.start();return{osc,ratio}});
+    const noiseLayer=(type,freq)=>{const source=c.createBufferSource(),filter=c.createBiquadFilter(),gain=c.createGain();source.buffer=this.noise;source.loop=true;filter.type=type;filter.frequency.value=freq;gain.gain.value=0;source.connect(filter);filter.connect(gain);gain.connect(this.master);source.start();return{source,filter,gain}};
+    this.road=noiseLayer('lowpass',650);this.tyres=noiseLayer('bandpass',1800);this.tyres.filter.Q.value=2;
+   }catch{this.button.disabled=true;this.button.textContent='No audio';return}
+  }
+  if(this.ctx.state==='suspended')this.ctx.resume().then(()=>this.update()).catch(()=>{});this.update()
+ }
+ active(){return this.ctx&&this.ctx.state==='running'&&!this.muted&&this.focused&&!document.hidden&&!help.open}
+ update(){if(!this.ctx||!this.engine)return;this.ramp(this.master.gain,this.active()?.65:0,.025);
+  let v=car,attenuation=1;if(!v){let distance=30;for(const candidate of cars)if(candidate.ai){const d=Math.hypot(candidate.x-P.x,candidate.z-P.z);if(d<distance){v=candidate;distance=d}}attenuation=v?Math.pow(1-distance/30,2)*.35:0}
+  if(!v){this.ramp(this.engine.gain,0);this.ramp(this.road.gain.gain,0);this.ramp(this.tyres.gain.gain,0);return}
+  const speed=Math.hypot(v.vx,v.vz),rpm=Math.max(650,v.rpm||900),throttle=Math.min(1,Math.max(0,v.thr||0)),alive=v.dmg<150;
+  // Four-cylinder firing frequency; harmonics and intake load follow the drivetrain.
+  const frequency=rpm/(v.n==='Bike'?60:30);for(const tone of this.tones)this.ramp(tone.osc.frequency,frequency*tone.ratio,.035);
+  this.ramp(this.engine.gain,alive?attenuation*(.075+.065*throttle):0);
+  this.ramp(this.road.gain.gain,attenuation*Math.min(.1,speed*.0025));
+  const slip=Math.max(0,((v.lat||0)-2.2)/7,v.spin?.7:0,v.hbs?.8:0),grip=tile(v.x,v.z)===1;
+  this.ramp(this.tyres.gain.gain,grip&&speed>3?attenuation*Math.min(.16,slip*.12):0);this.ramp(this.tyres.filter.frequency,1200+Math.min(1800,speed*35));
+ }
+ impact(x,z,strength){if(!this.active()||strength<1.5||this.voices>=6)return;
+  const c=this.ctx,now=c.currentTime,distance=Math.hypot(x-(car?car.x:P.x),z-(car?car.z:P.z));if(distance>45||now-this.lastImpact<.09)return;this.lastImpact=now;
+  const volume=Math.min(.65,strength*.035)*Math.pow(1-distance/45,2),duration=.12+Math.min(.3,strength*.008),source=c.createBufferSource(),filter=c.createBiquadFilter(),gain=c.createGain(),thud=c.createOscillator(),bass=c.createGain();
+  source.buffer=this.noise;filter.type='lowpass';filter.frequency.value=700+Math.min(2400,strength*75);source.connect(filter);filter.connect(gain);gain.connect(this.master);gain.gain.setValueAtTime(volume,now);gain.gain.exponentialRampToValueAtTime(.0001,now+duration);
+  thud.frequency.setValueAtTime(100,now);thud.frequency.exponentialRampToValueAtTime(35,now+duration);thud.connect(bass);bass.connect(this.master);bass.gain.setValueAtTime(volume*.6,now);bass.gain.exponentialRampToValueAtTime(.0001,now+duration);
+  this.voices++;source.onended=()=>{this.voices--;source.disconnect();filter.disconnect();gain.disconnect();thud.disconnect();bass.disconnect()};source.start();thud.start();source.stop(now+duration);thud.stop(now+duration)
+ }
+}
+const gameAudio=new GameAudio();
+for(const event of ['pointerdown','keydown'])document.addEventListener(event,e=>{if(e.isTrusted)gameAudio.unlock()},{capture:true,passive:true});
+window.addEventListener('blur',()=>{gameAudio.focused=false;gameAudio.update()});window.addEventListener('focus',()=>{gameAudio.focused=true;gameAudio.update()});document.addEventListener('visibilitychange',()=>gameAudio.update());
 function enableTouch(){document.body.classList.add('touch-enabled')}
 if(navigator.maxTouchPoints>0||matchMedia('(any-pointer:coarse)').matches)enableTouch();
 document.addEventListener('pointerdown',e=>{if(e.pointerType=='touch')enableTouch()},{passive:true});
 function resetStick(){touch.x=touch.y=0;touch.id=null;knob.style.transform='translate(0,0)'}
 function resetInput(){for(const n in k)delete k[n];held.clear();resetStick();drag=0;cameraPointer=null;touchButtons.forEach(b=>b.classList.remove('is-held'))}
-function openHelp(){resetInput();if(!help.open)help.showModal()}
-helpOpen.onclick=openHelp;document.getElementById('help-close').onclick=()=>help.close();help.addEventListener('close',()=>{resetInput();helpOpen.focus()});help.addEventListener('cancel',resetInput);
-onkeydown=e=>{if(help.open||e.defaultPrevented||e.ctrlKey||e.metaKey||e.altKey)return;if(e.target.closest('button')&&(e.key=='Enter'||e.key==' '))return;const n=key(e);if(n=='h'){e.preventDefault();openHelp();return}if(['w','s','a','d',' ','shift','e','c'].includes(n)){e.preventDefault();if(e.target==helpOpen)helpOpen.blur()}if(n=='e'&&!k.e)act();if(n=='c'&&!k.c)cyc();k[n]=1};onkeyup=e=>{delete k[key(e)]};
+function openHelp(){resetInput();if(!help.open)help.showModal();gameAudio.update()}
+helpOpen.onclick=openHelp;document.getElementById('help-close').onclick=()=>help.close();help.addEventListener('close',()=>{resetInput();helpOpen.focus();gameAudio.update()});help.addEventListener('cancel',resetInput);
+onkeydown=e=>{if(help.open||e.defaultPrevented||e.ctrlKey||e.metaKey||e.altKey)return;if(e.target.closest('button')&&(e.key=='Enter'||e.key==' '))return;const n=key(e);if(n=='m'){e.preventDefault();if(!e.repeat)gameAudio.toggle();return}if(n=='h'){e.preventDefault();openHelp();return}if(['w','s','a','d',' ','shift','e','c'].includes(n)){e.preventDefault();if(e.target==helpOpen)helpOpen.blur()}if(n=='e'&&!k.e)act();if(n=='c'&&!k.c)cyc();k[n]=1};onkeyup=e=>{delete k[key(e)]};
 window.addEventListener('blur',resetInput);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetInput()});
 function moveStick(e){const rect=stick.getBoundingClientRect(),radius=rect.width*.32,x=(e.clientX-rect.left-rect.width/2)/radius,y=(rect.top+rect.height/2-e.clientY)/radius,length=Math.hypot(x,y),scale=Math.max(1,length);
  touch.x=length<.12?0:x/scale;touch.y=length<.12?0:y/scale;knob.style.transform=`translate(${touch.x*radius}px,${-touch.y*radius}px)`}
@@ -420,7 +464,7 @@ const smoke=pool(220,0),spark=pool(90,1);
 function emit(A,x,y,z,vx,vy,vz,size,grow,life,col,op,g){const p=A[A.i=(A.i+1)%A.length];p.s.position.set(x,y,z);p.v[0]=vx;p.v[1]=vy;p.v[2]=vz;p.size=size;p.grow=grow;p.life=p.max=life;p.op=op;p.g=g;p.s.material.color.copy(lin(col));if(A==spark)p.s.material.color.multiplyScalar(6);p.s.visible=true}
 function updParts(){for(const A of[smoke,spark])for(const p of A)if(p.life>0){p.life-=DT;const s=p.s,t=Math.max(0,p.life/p.max);s.position.x+=p.v[0]*DT;s.position.y+=p.v[1]*DT;s.position.z+=p.v[2]*DT;p.v[1]+=p.g*DT;p.v[0]*=.97;p.v[2]*=.97;
  if(s.position.y<.05){s.position.y=.05;p.v[1]*=-.3}const z=p.size+p.grow*(1-t);s.scale.set(z,z,1);s.material.opacity=p.op*t;if(p.life<=0)s.visible=false}}
-function sparks(x,y,z,im){for(let n=0;n<Math.min(30,im*2);n++)emit(spark,x,y,z,(R()-.5)*im*.8,R()*im*.4+1,(R()-.5)*im*.8,.15,0,.3+R()*.4,R()<.5?'#ffb040':'#fff0a0',1,-12)}
+function sparks(x,y,z,im){gameAudio.impact(x,z,im);for(let n=0;n<Math.min(30,im*2);n++)emit(spark,x,y,z,(R()-.5)*im*.8,R()*im*.4+1,(R()-.5)*im*.8,.15,0,.3+R()*.4,R()<.5?'#ffb040':'#fff0a0',1,-12)}
 function hurt(v,im){v.dmg=Math.min(200,v.dmg+im*2.2);if(v.dmg<170)for(let n=0;n<2;n++){const c=v.o.children[R()*2|0];if(c){c.rotation.x+=(R()-.5)*.012*im;c.rotation.z+=(R()-.5)*.008*im;c.position.y-=R()*.004*im}}}
 const SKN=1400,skid=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1).rotateX(-PI/2),new THREE.MeshBasicMaterial({color:0x0c0c0c,transparent:true,opacity:.55,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}),SKN);
 {const Z=new THREE.Matrix4().makeScale(0,0,0);for(let i=0;i<SKN;i++)skid.setMatrixAt(i,Z)}skid.frustumCulled=false;S.add(skid);
@@ -567,7 +611,7 @@ let simLast=performance.now(),simAccumulator=0,simTime=0;
 function advanceSimulation(now){const elapsed=Math.max(0,Math.min(.1,(now-simLast)/1000));simLast=now;
  if(help.open||document.hidden){simAccumulator=0;return}simAccumulator+=elapsed;
  while(simAccumulator+1e-9>=DT){step();updParts();simTime+=DT;ambient(simTime);simAccumulator=Math.max(0,simAccumulator-DT)}mini()}
-(function loop(now=performance.now()){advanceSimulation(now);
+(function loop(now=performance.now()){advanceSimulation(now);gameAudio.update();
  if(comp){fin.uniforms.ex.value=.92+.7*night;const s=car?Math.hypot(car.vx,car.vz):0;fin.uniforms.blur.value=car&&camMode!=2?Math.min(1,Math.max(0,(s-18)/35))*.04:0;comp.render()}
  else{r.toneMappingExposure=.55+.4*night;r.render(S,cam)}requestAnimationFrame(loop)})();
 </script></body></html>

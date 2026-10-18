@@ -44,3 +44,5 @@ Road overlay materials use polygon depth bias to prevent the terrain from showin
 - Keep the bridge connected to the coastal road and its rails outside the carriageway.
 - Check street-level and overhead views, vehicle clearance and traffic traversal when editing roads.
 - Preserve keyboard and touch driving controls when changing world geometry.
+
+Audio uses one lazy Web Audio graph unlocked by a trusted pointer/key gesture. Reuse engine oscillators and filtered noise sources; ramp gains/pitch, limit and disconnect impact voices, and keep audio outside physics. The Sound button below the minimap is at least 44px and exposes mute state with text and aria-pressed; M also toggles. Persist mute where storage is available. Silence Help, hidden tabs and focus loss immediately. Generated engine tones follow RPM/load, tyre noise follows slip/surface, and nearby traffic/impacts attenuate with distance. Do not present synthesized effects as vehicle recordings.

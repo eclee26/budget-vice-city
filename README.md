@@ -47,6 +47,7 @@ The driving HUD shows speed, gear, vehicle condition and RPM. Open **Help** (or 
 - **Day and night:**
   - The sky changes through the day, with sky reflections and soft shadows.
   - Windows and street lamps light up at night.
+- **Audio:** synthesized RPM/load-driven engines, nearby traffic, road noise, tyre slip and collision impacts. Sound starts after your first click, tap or keypress. Use the Sound button or **M** to mute; the preference is saved when browser storage is available. Help, background tabs and focus loss silence audio. These are generated effects, not recordings of the real cars.
 - **Effects:**
   - Bloom, colour grading and motion blur.
   - Tyre smoke, skid marks and dust.
