@@ -18,8 +18,11 @@ Open `index.html` in a browser, or turn on GitHub Pages: **Settings â†’ Pages â†
 | Camera view (chase / hood / cockpit) | C |
 | Look around | Drag mouse or touch |
 | Zoom | Mouse wheel |
+| Controls help | H |
 
-On-screen buttons are shown for touch devices.
+Touch devices get a left thumbstick for movement or steering, separate GAS and BRAKE pedals while driving, and buttons for entering/exiting a car, jumping/handbraking and changing the camera. Push the stick farther to run on foot. Steering, pedals and dragging the camera support simultaneous fingers. Hold BRAKE at a standstill to reverse.
+
+The driving HUD shows speed, gear, vehicle condition and RPM. Open **Help** (or press **H**) for the full control list; gameplay pauses while Help is open.
 
 ## Features
 
@@ -31,6 +34,7 @@ On-screen buttons are shown for touch devices.
 - **Vehicles:** Sports, Sedan, Van, Bike and the original Kaze R sport sedan.
 - **City life:** traffic that follows lanes and uses indicators, and pedestrians who flee and can be knocked over.
 - **World:** a city grid, a beach boardwalk, and an island with a lighthouse and bridge.
+- **Architecture:** houses with pitched roofs and porches, shops with awnings, neon bars, balcony apartments, glass offices, and three malls with larger footprints and storefront signs. These are exterior scenery; repeated parts share instanced geometry.
 - **Roads:** 18 m avenues and 22 m boulevards, sweeping coastal bends, rounded outer corners, and fewer intersections. World-space road surfaces and antialiased markings stay sharp up close; the minimap, collisions, and traffic lanes share the same paths.
 - **Day and night:**
   - The sky changes through the day, with sky reflections and soft shadows.
