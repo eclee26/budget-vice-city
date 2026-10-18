@@ -223,7 +223,7 @@ for(let b=0;b<14;b++){const g=new THREE.Group(),w=[-1,1].map(s=>{const p=new THR
 // vehicles
 const TY={ // m kg, Tp peak torque Nm, red redline rpm, gr gear ratios, fd final drive, cda drag area m², dr driven axle
 Sports:{L:4.4,W:2,H:.8,st:.5,m:1300,Tp:330,red:7500,gr:[3.2,2.2,1.6,1.25,1,.82],fd:3.7,cda:.62,dr:'R'},
-Sedan:{L:4.2,W:2.1,H:1.1,st:.55,m:1400,Tp:210,red:6300,gr:[3.5,2,1.4,1.05,.85],fd:4,cda:.7,dr:'F'},
+Sedan:{L:4.55,W:1.82,H:.6,wb:2.7,front:.59,cg:.52,iz:2350,cf:90000,cr:82000,st:.59,steerRate:2.3,m:1430,Tp:210,red:6500,gr:[3.62,2.05,1.37,1.03,.82,.68],fd:3.94,cda:.64,dr:'F',r:.32},
 Van:{L:5.2,W:2.3,H:2.2,st:.5,m:2200,Tp:300,red:4800,gr:[3.9,2.3,1.5,1,.8],fd:4.1,cda:1.4,dr:'R'},
 Bike:{L:2.2,W:.7,H:.6,st:.7,m:240,Tp:95,red:11500,gr:[2.8,2,1.6,1.35,1.18,1.05],fd:6.2,cda:.4,dr:'R',r:.3},
 'Kaze R':{L:4.5,W:2,H:.85,st:.62,m:1270,Tp:215,red:8400,gr:[3.27,2.13,1.52,1.15,.92,.74],fd:4.76,cda:.66,dr:'F'}};
@@ -235,12 +235,12 @@ function kaze(o,t){const c=carMat('#1f6f8b'),L=t.L,W=t.W;
  for(const z of[-.62,.62])bx(c,.22,.14,.22,.55,1.3,z*1.75,o);
  for(const x of[-L*.31,L*.31])for(const z of[-W/2,W/2]){bx(RUB,.9,.9,.28,x,.45,z,o);bx(new THREE.MeshStandardMaterial({color:lin('#c9a227'),metalness:.9,roughness:.25}),.55,.55,.3,x,.45,z,o)}}
 const cars=[],dark=GLASS;
-function mkCar(n){const t=TY[n],o=new THREE.Group(),col=['#e33','#fd0','#0cf','#fff','#f6c','#3e6'][R()*6|0];o.rotation.order='YXZ';
+function mkCar(n){const t=TY[n],o=new THREE.Group(),wheels=[],col=['#e33','#fd0','#0cf','#fff','#f6c','#3e6'][R()*6|0];o.rotation.order='YXZ';
  if(n=='Kaze R')kaze(o,t);else{bx(carMat(col),t.L,t.H,t.W,0,.4+t.H/2,0,o);
  if(n=='Bike'){bx(dark,.9,.3,.5,-.2,.4+t.H+.15,0,o);for(const x of[-.8,.8])bx(RUB,.7,.7,.2,x,.35,0,o)}
- else{n=='Van'?bx(dark,.3,.7,t.W-.2,t.L/2-.1,.4+t.H*.72,0,o):bx(dark,t.L*.48,.8,t.W-.2,-.3,.4+t.H+.4,0,o);
-  for(const x of[-t.L*.32,t.L*.32])for(const z of[-t.W/2,t.W/2])bx(RUB,.8,.8,.3,x,.4,z,o)}
- }S.add(o);const v={x:0,z:0,a:0,vx:0,vz:0,st:0,roll:0,pitch:0,t,n,o,ai:null,dmg:0,ind:0,il:[],tm:new THREE.MeshBasicMaterial({color:0x330000,toneMapped:false}),rm:new THREE.MeshBasicMaterial({color:0x111111,toneMapped:false})};
+ else{n=='Van'?bx(dark,.3,.7,t.W-.2,t.L/2-.1,.4+t.H*.72,0,o):bx(dark,t.L*.48,n=='Sedan'?.64:.8,t.W-.2,-.3,.4+t.H+(n=='Sedan'?.32:.4),0,o);
+  for(const x of[-(t.wb||t.L*.64)/2,(t.wb||t.L*.64)/2])for(const z of[-t.W/2+.08,t.W/2-.08]){if(n=='Sedan'){const steer=new THREE.Group(),spin=new THREE.Group();steer.position.set(x,t.r,z);steer.add(spin);o.add(steer);const tyre=new THREE.Mesh(new THREE.CylinderGeometry(t.r,t.r,.23,18).rotateX(PI/2),RUB),hub=new THREE.Mesh(new THREE.CylinderGeometry(.19,.19,.24,12).rotateX(PI/2),mat('#b5bdc3'));tyre.castShadow=hub.castShadow=true;spin.add(tyre,hub);bx('#49505a',.035,.3,.25,0,0,0,spin);wheels.push({steer,spin,front:x>0})}else bx(RUB,.8,.8,.3,x,.4,z,o)}}
+ }S.add(o);const v={x:0,z:0,a:0,vx:0,vz:0,st:0,roll:0,pitch:0,t,n,o,wheels,ai:null,dmg:0,ind:0,il:[],tm:new THREE.MeshBasicMaterial({color:0x330000,toneMapped:false}),rm:new THREE.MeshBasicMaterial({color:0x111111,toneMapped:false})};
  const y=t.H*.5+.45,zs=n=='Bike'?[0]:[-t.W/2+.35,t.W/2-.35],lb=(m_,sx,sy,sz,x,yy,z)=>{const b=bx(m_,sx,sy,sz,x,yy,z,o);b.castShadow=false;return b};
  for(const z of zs){lb(headMat,.06,.16,.4,t.L/2+.02,y,z);lb(v.tm,.06,.15,.4,-t.L/2-.02,y+.08,z)}lb(v.rm,.06,.1,.3,-t.L/2-.02,y-.07,0);
  for(const s of[-1,1])for(const x of[t.L/2+.01,-t.L/2-.01]){const b=lb(ambMat,.07,.09,.14,x,y+(x>0?.14:-.1),s*(t.W/2-.08));b.side_=s;b.visible=false;v.il.push(b)}
@@ -371,38 +371,51 @@ function updateHud(){const driving=!!car;if(hudDriving!==driving){hudDriving=dri
 // physics
 let shake=0,ca=0,obs=[];
 const G9=9.81,DT=1/60;
-function phys(v,ti,bi,si,hb){const t=v.t,fx=Math.cos(v.a),fz=Math.sin(v.a),rx=-fz,rz=fx,tl=tile(v.x,v.z),off=tl==0||tl==3,mu=off?(tl==3?.5:.65):1.05,
- L=t.L*.62,a=L/2,b=L/2,M=t.m,I=M*a*b*1.2,R0=t.r||.32;
+function phys(v,ti,bi,si,hb){const t=v.t,tl=tile(v.x,v.z),off=tl==0||tl==3,mu=tl==3?.48:off?.64:1.02,
+ L=t.wb||t.L*.62,M=t.m,front=t.front||(t.dr=='F'?.58:.49),a=L*(1-front),b=L*front,I=t.iz||M*(t.L*t.L+t.W*t.W)/12,R0=t.r||.32;
  if(v.thr==null)Object.assign(v,{g:1,sh:0,hold:0,rpm:900,yr:0,ax:0,thr:0,brk:0});
- let u=v.vx*fx+v.vz*fz,w=v.vx*rx+v.vz*rz;const sgn=Math.sign(u),sp=Math.abs(u);
- // automatic gearbox; reverse engages after holding brake at a standstill
- if(sp<.6&&!v.ai){if(bi&&!ti&&v.g>0){if(++v.hold>18){v.g=-1;v.hold=0}}else if(ti&&!bi&&v.g<0){if(++v.hold>18){v.g=1;v.hold=0}}else v.hold=0}else v.hold=0;
- const thr=v.g<0?bi:ti,brk=v.g<0?ti:bi;v.thr+=(thr-v.thr)*.12;v.brk+=(brk-v.brk)*.25;
- const k=(v.g<0?3.3:t.gr[v.g-1])*t.fd,rpmW=sp/(2*PI*R0)*60*k,launch=900+v.thr*2800;
- if(v.sh>0)v.sh--;else if(v.g>0){if(rpmW>t.red*.96&&v.g<t.gr.length){v.g++;v.sh=14}else if(v.g>1&&rpmW<t.red*(v.thr>.5?.5:.32)){v.g--;v.sh=10}}
- const rpmE=Math.max(rpmW,(v.g==1||v.g<0)&&rpmW<launch?launch:900);v.rpm+=(Math.min(rpmE,t.red)-v.rpm)*.25;  // clutch slip on launch
- const x=v.rpm/t.red,Te=rpmW>t.red*1.02?0:t.Tp*(.55+.95*x-.55*x*x)*v.thr*(v.dmg>150?0:v.dmg>90?.6:1);                                // torque curve, rev limiter
- let Fd=v.sh>0?0:Te*k*.88/R0*(v.g<0?-1:1);
- if(v.thr<.05&&!v.sh)Fd-=sgn*Math.min(sp*30,x*t.Tp*k*.12/R0);                                            // engine braking
- // weight transfer + traction limit
- const dW=.5/L*M*v.ax,Nf=Math.max(0,M*G9*b/L-dW),Nr=Math.max(0,M*G9*a/L+dW),fw=t.dr=='F',Nd=fw?Nf:Nr;
- v.spin=Math.abs(Fd)>mu*Nd*1.02&&v.thr>.3&&sp<25;Fd=Math.max(-mu*Nd,Math.min(mu*Nd,Fd));
- let Fbf=0,Fbr=0;if(v.brk>.01&&sp>.05){Fbf=Math.min(mu*Nf,M*G9*.62*v.brk);Fbr=Math.min(mu*Nr,M*G9*.4*v.brk)}  // ABS
- if(hb)Fbr=mu*Nr*.85;
- const Fxf=(fw?Fd:0)-Fbf*sgn,Fxr=(fw?0:Fd)-Fbr*sgn;
- // steering: lock shrinks with speed, rate-limited
- const dmax=t.st*1.1/(1+u*u/350);v.st+=Math.max(-.04,Math.min(.04,si*dmax-v.st));const d=v.st,cs=Math.cos(d),sn=Math.sin(d);
- // tyres: slip angle -> saturating lateral force inside the friction circle
- const lat=(vl,vg,N,Fx,m_)=>{const cap=Math.sqrt(Math.max(0,(m_*N)**2-Fx*Fx))+1e-3;return -cap*Math.tanh(16*N*Math.atan2(vl,Math.max(Math.abs(vg),2.5))/cap)};
- const wf=w+v.yr*a,wr=w-v.yr*b,Fyf=lat(-u*sn+wf*cs,u*cs+wf*sn,Nf,Fxf,mu),Fyr=lat(wr,u,Nr,Fxr,hb?mu*.35:mu);
- const drag=.6*t.cda*u*sp,roll=sp>.05?(off?.06:.014)*M*G9*sgn:0;
- const Fx=Fxf*cs-Fyf*sn+Fxr-drag-roll,Fy=Fxf*sn+Fyf*cs+Fyr,tq=a*(Fxf*sn+Fyf*cs)-b*Fyr,ax=Fx/M,ay=Fy/M;
- v.lat=Math.abs(w);v.hbs=hb&&sp>3;v.ax+=(ax-v.ax)*.2;v.vx+=(fx*ax+rx*ay)*DT;v.vz+=(fz*ax+rz*ay)*DT;v.yr+=tq/I*DT;
- if(sp<4){const bl=sp/4;v.yr=v.yr*bl+u*Math.tan(d)/L*(1-bl)}                                            // low-speed kinematic turning
- v.a+=v.yr*DT;
- const u2=v.vx*fx+v.vz*fz;if(v.thr<.05&&Math.abs(u2)<.3&&(v.brk>.1||hb||Math.abs(u2)<.08)){v.vx-=fx*u2;v.vz-=fz*u2}  // come to rest
- if(Math.hypot(v.vx,v.vz)<.05&&v.thr<.05){v.vx=v.vz=0;v.yr=0}
- v.roll+=(Math.max(-.1,Math.min(.1,-ay*.012))-v.roll)*.15;v.pitch+=(Math.max(-.07,Math.min(.07,ax*.008))-v.pitch)*.15;
+ const initialU=v.vx*Math.cos(v.a)+v.vz*Math.sin(v.a),speed=Math.abs(initialU);
+ // Brake-to-reverse selection retains the same controls as the automatic gearbox.
+ if(speed<.6&&!v.ai){if(bi&&!ti&&v.g>0){if(++v.hold>18){v.g=-1;v.hold=0}}else if(ti&&!bi&&v.g<0){if(++v.hold>18){v.g=1;v.hold=0}}else v.hold=0}else v.hold=0;
+ const throttle=v.g<0?bi:ti,brake=v.g<0?ti:bi;v.thr+=(throttle-v.thr)*(1-Math.exp(-DT/.08));v.brk+=(brake-v.brk)*(1-Math.exp(-DT/.05));
+ let ratio=(v.g<0?3.3:t.gr[v.g-1])*t.fd,rpmW=speed/(2*PI*R0)*60*ratio;
+ if(v.sh>0)v.sh--;else if(v.g>0){if(rpmW>t.red*.95&&v.g<t.gr.length){v.g++;v.sh=12}else if(v.g>1&&rpmW<t.red*(v.thr>.6?.47:.3)){v.g--;v.sh=9}}
+ ratio=(v.g<0?3.3:t.gr[v.g-1])*t.fd;rpmW=speed/(2*PI*R0)*60*ratio;
+ const launch=900+v.thr*2300,engineRpm=Math.max(900,rpmW,(v.g==1||v.g<0)?launch:0);v.rpm+=(Math.min(engineRpm,t.red)-v.rpm)*(1-Math.exp(-DT/.07));
+ const rev=v.rpm/t.red,torque=rpmW>t.red*1.03?0:t.Tp*(.55+.95*rev-.55*rev*rev)*v.thr*(v.dmg>150?0:v.dmg>90?.6:1);
+ const drive=v.sh>0?0:torque*ratio*.9/R0*(v.g<0?-1:1);
+ // Speed-sensitive input limits represent how a driver meters steering at speed.
+ // The resulting yaw still comes from tyre forces, rather than rotating the car directly.
+ const lock=Math.min(t.st,Math.atan2(L*mu*G9*.94,Math.max(speed*speed,1))),target=si*lock,steerRate=Math.abs(si)<.01?3.2:t.steerRate||2.3;
+ v.st+=Math.max(-steerRate*DT,Math.min(steerRate*DT,target-v.st));
+ let lastAx=0,lastAy=0;
+ // Three integration substeps keep stiff road tyres stable at low speed.
+ for(let sub=0;sub<3;sub++){const h=DT/3,fx=Math.cos(v.a),fz=Math.sin(v.a),rx=-fz,rz=fx,cs=Math.cos(v.st),sn=Math.sin(v.st);
+  let u=v.vx*fx+v.vz*fz,w=v.vx*rx+v.vz*rz;const sp=Math.abs(u),sgn=Math.sign(u)||Math.sign(drive)||1,blend0=Math.max(0,Math.min(1,(sp-2)/4)),blend=blend0*blend0*(3-2*blend0);
+  const transfer=M*(t.cg||.5)*v.ax/L,Nf=Math.max(0,M*G9*front-transfer),Nr=Math.max(0,M*G9*(1-front)+transfer),fw=t.dr=='F';
+  const braking=M*G9*1.18*v.brk,frontBrake=braking*.68,rearBrake=braking*.32+(hb?mu*Nr*.95:0);
+  let Fxf=(fw?drive:0)-frontBrake*sgn,Fxr=(fw?0:drive)-rearBrake*sgn;
+  // Combined slip shares grip between braking/acceleration and cornering.
+  // It never drops lateral capacity to zero just because a driven tyre reaches its limit.
+  const tyre=(lateral,longitudinal,load,longForce,stiffness,grip)=>{const cap=Math.max(.01,grip*load),alpha=Math.atan2(lateral,Math.max(Math.abs(longitudinal),2)),side=-cap*Math.tanh(stiffness*alpha/cap)*blend,length=Math.hypot(longForce,side),scale=Math.min(1,cap/Math.max(.01,length));return[longForce*scale,side*scale]};
+  let Fyf,Fyr;[Fxf,Fyf]=tyre(-u*sn+(w+v.yr*a)*cs,u*cs+(w+v.yr*a)*sn,Nf,Fxf,t.cf||Nf*13,mu);
+  [Fxr,Fyr]=tyre(w-v.yr*b,u,Nr,Fxr,t.cr||Nr*14,hb?mu*.4:mu);
+  const drag=.6125*t.cda*u*sp,rolling=(off?(tl==3?.075:.05):.012)*M*G9*Math.tanh(u/.5),engineBrake=v.thr<.03&&!v.sh?sgn*Math.min(sp*35,t.Tp*ratio*.09/R0):0;
+  const ax=(Fxf*cs-Fyf*sn+Fxr-drag-rolling-engineBrake)/M,ay=(Fxf*sn+Fyf*cs+Fyr)/M;
+  v.vx+=(fx*ax+rx*ay)*h;v.vz+=(fz*ax+rz*ay)*h;v.yr+=(a*(Fxf*sn+Fyf*cs)-b*Fyr)/I*h;
+  let nextU=v.vx*fx+v.vz*fz,nextW=v.vx*rx+v.vz*rz;
+  if((v.brk>.02||hb)&&Math.abs(drive)<braking+(hb?mu*Nr:0)&&(u*nextU<0||Math.abs(u)<.03))nextU=0;
+  // A parking-speed bicycle model blends into the force model by 22 km/h.
+  const parkingYaw=nextU*Math.tan(v.st)/L;v.yr=parkingYaw*(1-blend)+v.yr*blend;nextW=b*parkingYaw*(1-blend)+nextW*blend;
+  if(Math.hypot(nextU,nextW)<.06&&v.thr<.03){nextU=nextW=0;v.yr=0}
+  v.vx=fx*nextU+rx*nextW;v.vz=fz*nextU+rz*nextW;v.a+=v.yr*h;v.ax+=(ax-v.ax)*(1-Math.exp(-h/.12));lastAx=ax;lastAy=ay;
+  v.spin=Math.abs(drive)>mu*(fw?Nf:Nr)*1.05&&v.thr>.3&&sp<25;
+ }
+ const fx=Math.cos(v.a),fz=Math.sin(v.a),rx=-fz,rz=fx;v.lat=Math.abs(v.vx*rx+v.vz*rz);v.hbs=hb&&speed>3;
+ // Damped suspension settles naturally after steering, acceleration and braking.
+ const spring=(value,velocity,target)=>{velocity+=(90*(target-value)-15*velocity)*DT;return[value+velocity*DT,velocity]};
+ [v.roll,v.rollV]=spring(v.roll,v.rollV||0,Math.max(-.08,Math.min(.08,-lastAy*.0055)));[v.pitch,v.pitchV]=spring(v.pitch,v.pitchV||0,Math.max(-.055,Math.min(.055,lastAx*.004)));
+ v.wheelSpin=(v.wheelSpin||0)-(v.vx*fx+v.vz*fz)/R0*DT;
  const hit=(X,Z)=>{for(const s of[-t.L/2,t.L/2])for(const q of[-t.W/2,t.W/2])if(solid(X+fx*s+rx*q,Z+fz*s+rz*q))return 1},nx=v.x+v.vx*DT,nz=v.z+v.vz*DT;
  if(!hit(nx,nz)||hit(v.x,v.z)){v.x=nx;v.z=nz}
  else{const im=Math.hypot(v.vx,v.vz);if(!hit(nx,v.z)){v.x=nx;v.vz*=-.3}else if(!hit(v.x,nz)){v.z=nz;v.vx*=-.3}else{v.vx*=-.3;v.vz*=-.3}
@@ -434,10 +447,10 @@ function step(){dayNight();const tr=clamp((pressed('d')?1:0)-(pressed('a')?1:0)+
   for(const v of cars){const dx=P.x-v.x,dz=P.z-v.z,d=Math.hypot(dx,dz),rr=v.t.L*.55;if(d<rr&&d>0){P.x=v.x+dx/d*rr;P.z=v.z+dz/d*rr}}
   if(pressed(' ')&&P.y==0)P.vy=.32;P.vy-=.02;P.y=Math.max(0,P.y+P.vy);if(!P.y)P.vy=0;
   const ps=Math.hypot(P.vx,P.vz);P.ph+=ps*2.6;anim(P.H,P.ph,Math.min(.95,ps*7),ps>.11,P.y>0);P.o.position.y=P.y}
- for(const v of cars){v.o.position.set(v.x,0,v.z);v.o.rotation.set(v.roll,-v.a,v.pitch);if(Math.abs(v.x-P.x)+Math.abs(v.z-P.z)<160)carFx(v)}
+ for(const v of cars){for(const wheel of v.wheels){wheel.steer.rotation.y=wheel.front?-v.st:0;wheel.spin.rotation.z=v.wheelSpin||0}v.o.position.set(v.x,0,v.z);v.o.rotation.set(v.roll,-v.a,v.pitch);if(Math.abs(v.x-P.x)+Math.abs(v.z-P.z)<160)carFx(v)}
  P.o.position.x=P.x;P.o.position.z=P.z;P.o.rotation.y=-P.a;
  // camera: chase + mouse/touch orbit, wheel zoom, recentres when moving
- let da=P.a-ca;da=Math.atan2(Math.sin(da),Math.cos(da));if(car||Math.hypot(touch.x,touch.y)<.01)ca+=da*(car?.06:.12);
+ let da=P.a-ca;da=Math.atan2(Math.sin(da),Math.cos(da));if(car||Math.hypot(touch.x,touch.y)<.01)ca+=da*(car?.1:.12);
  const sp=car?Math.hypot(car.vx,car.vz):Math.hypot(P.vx,P.vz);idle++;if(!drag&&idle>90&&sp>(car?1:.03))yo*=.95;
  const yaw=ca+yo,d=(car?10+sp*.06:5)*zm,h=((car?3:1.6)+pt*(car?8:5))*zm;
  cp.lerp(new THREE.Vector3(P.x-Math.cos(yaw)*d,h+P.y,P.z-Math.sin(yaw)*d),.15);cam.position.copy(cp);
@@ -465,7 +478,13 @@ vec3 aces(vec3 x){x*=ex;return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.
 void main(){vec2 c=vUv-.5;vec3 col=vec3(0.);float tw=0.;for(int i=0;i<8;i++){float w=1.-float(i)/9.;col+=texture2D(tDiffuse,c*(1.-blur*float(i)/7.)+.5).rgb*w;tw+=w;}col=aces(col/tw);
  float l=dot(col,vec3(.299,.587,.114));col=mix(vec3(l),col,1.12);col*=mix(vec3(.96,1.,1.05),vec3(1.06,1.,.94),smoothstep(.2,.8,l));col=pow(col,vec3(1./2.2));
  col*=mix(.55,1.,smoothstep(.85,.25,length(c*vec2(1.,.8))));col+=(fract(sin(dot(vUv,vec2(12.9898,78.233)))*43758.5453)-.5)/255.;gl_FragColor=vec4(col,1.);}`});comp.addPass(fin)}
-(function loop(){if(!help.open){step();mini();updParts();ambient(performance.now()/1000)}
+// Simulation time is independent of rendering FPS, including on slower phones.
+step();mini();ambient(0);
+let simLast=performance.now(),simAccumulator=0,simTime=0;
+function advanceSimulation(now){const elapsed=Math.max(0,Math.min(.1,(now-simLast)/1000));simLast=now;
+ if(help.open||document.hidden){simAccumulator=0;return}simAccumulator+=elapsed;
+ while(simAccumulator+1e-9>=DT){step();updParts();simTime+=DT;ambient(simTime);simAccumulator=Math.max(0,simAccumulator-DT)}mini()}
+(function loop(now=performance.now()){advanceSimulation(now);
  if(comp){fin.uniforms.ex.value=.92+.7*night;const s=car?Math.hypot(car.vx,car.vz):0;fin.uniforms.blur.value=car&&camMode!=2?Math.min(1,Math.max(0,(s-18)/35))*.04:0;comp.render()}
  else{r.toneMappingExposure=.55+.4*night;r.render(S,cam)}requestAnimationFrame(loop)})();
 </script></body></html>

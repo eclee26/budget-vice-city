@@ -26,11 +26,14 @@ The driving HUD shows speed, gear, vehicle condition and RPM. Open **Help** (or 
 
 ## Features
 
-- **Driving:** a full vehicle simulation with:
+- **Driving:** a vehicle model with:
   - An engine torque curve and automatic gearbox.
   - Tyre slip and weight transfer.
-  - Anti-lock brakes and aerodynamic drag.
+  - Grip-limited braking and aerodynamic drag.
   - A reverse gear.
+  - Combined acceleration/braking/cornering tyre forces, front/rear weight distribution, and damped body movement.
+  - A fixed 60 Hz simulation with three tyre integration substeps, independent of rendering FPS.
+- **Sedan handling:** passenger-car dimensions, a 2.7 m wheelbase, front-heavy weight distribution, responsive steering and throttle, six-speed automatic gearing, and visible wheel steering/rotation. Flat dry-road tests give approximately 8.6 s from 0–100 km/h and 38 m braking from 100 km/h.
 - **Vehicles:** Sports, Sedan, Van, Bike and the original Kaze R sport sedan.
 - **City life:** traffic that follows lanes and uses indicators, and pedestrians who flee and can be knocked over.
 - **World:** a city grid, a beach boardwalk, and an island with a lighthouse and bridge.
@@ -51,3 +54,7 @@ The driving HUD shows speed, gear, vehicle condition and RPM. Open **Help** (or 
 
 - three.js r128 is loaded from a CDN, so the game needs an internet connection.
 - It's graphically heavy and runs best on a desktop browser.
+
+## Physics checks
+
+Run `node tests/vehicle-physics.cjs` with Node.js; no packages are required. The checks cover acceleration, braking, steering under power, reverse, stability, grip differences, and identical driving results at 30/60/144 rendering FPS. These are flat-road model checks, not validation against a particular real vehicle.
