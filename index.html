@@ -108,7 +108,7 @@ const tx=new THREE.CanvasTexture(terrain);tx.encoding=THREE.sRGBEncoding;tx.anis
 const gr=new THREE.Mesh(new THREE.PlaneGeometry(N*T,N*T).rotateX(-PI/2),new THREE.MeshStandardMaterial({map:tx,roughness:.9}));gr.position.set(N*T/2,0,N*T/2);gr.receiveShadow=true;S.add(gr);
 // World-space ribbons stay sharp at driving distance, independent of atlas resolution.
 // UVs carry distance across a ribbon (or radius on a round cap) for edge coverage.
-function roadMaterial(color){const material=new THREE.MeshStandardMaterial({color:lin(color),roughness:.94,transparent:true,depthWrite:false});material.extensions={derivatives:true};
+function roadMaterial(color){const material=new THREE.MeshStandardMaterial({color:lin(color),roughness:.94,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-2});material.extensions={derivatives:true};
  material.onBeforeCompile=shader=>{shader.vertexShader='varying vec2 vRoadEdge;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvRoadEdge=uv;');
  shader.fragmentShader='varying vec2 vRoadEdge;\n'+shader.fragmentShader.replace('#include <alphatest_fragment>',`float edgeDistance=length(vRoadEdge);float edgeWidth=max(fwidth(edgeDistance),0.0001);diffuseColor.a*=1.0-smoothstep(1.0-edgeWidth,1.0,edgeDistance);
 #include <alphatest_fragment>`)};return material}
@@ -240,44 +240,82 @@ function kaze(o,t){const c=carMat('#1f6f8b'),L=t.L,W=t.W;
  for(const z of[-.62,.62])bx(c,.22,.14,.22,.55,1.3,z*1.75,o);
  for(const x of[-L*.31,L*.31])for(const z of[-W/2,W/2]){bx(RUB,.9,.9,.28,x,.45,z,o);bx(new THREE.MeshStandardMaterial({color:lin('#c9a227'),metalness:.9,roughness:.25}),.55,.55,.3,x,.45,z,o)}}
 const cars=[],dark=GLASS;
-// Profiles are authored per generation; x points toward the front of the car.
+// Exterior profiles follow the regional references in references/CIVIC_REFERENCES.md.
 const civicProfiles={
- fd:{roof:1.435,rear:-1.31,roofRear:-.66,roofFront:.36,front:1.26,nose:.68,deck:.91,plate:'FD 2009',spokes:10},
- fb:{roof:1.435,rear:-1.19,roofRear:-.65,roofFront:.35,front:1.16,nose:.75,deck:.97,plate:'FB 2013',spokes:5},
- ek:{roof:1.365,rear:-1.13,roofRear:-.64,roofFront:.38,front:1.07,nose:.72,deck:.91,plate:'SiR 1997',spokes:5}
+ fd:{roof:1.435,rear:-1.35,roofRear:-.65,roofFront:.37,front:1.26,nose:.84,deck:.99,plate:'FD 2009',spokes:10},
+ fb:{roof:1.435,rear:-1.25,roofRear:-.66,roofFront:.32,front:1.17,nose:.875,deck:1.015,plate:'FB 2013',spokes:5},
+ ek:{roof:1.39,rear:-1.18,roofRear:-.65,roofFront:.3,front:1.08,nose:.835,deck:.965,plate:'SiR 1997',spokes:5}
 };
-const civicWheelGeometry=new Map(),civicLabelMaterials=new Map();
+const civicWheelGeometry=new Map(),civicLabelMaterials=new Map(),civicGeometry=new Map(),civicTrim=new THREE.MeshStandardMaterial({color:lin('#353e46'),roughness:.48}),civicChrome=new THREE.MeshStandardMaterial({color:lin('#b8c2ca'),metalness:.85,roughness:.24}),civicGlass=new THREE.MeshPhysicalMaterial({color:lin('#132935'),metalness:.24,roughness:.19,clearcoat:1,envMapIntensity:.55}),civicLens=new THREE.MeshStandardMaterial({color:lin('#9caab4'),metalness:.7,roughness:.17}),civicClear=new THREE.MeshStandardMaterial({color:lin('#c6ced0'),metalness:.4,roughness:.25});
 function civicLabel(text){if(civicLabelMaterials.has(text))return civicLabelMaterials.get(text);const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;const c=canvas.getContext('2d');c.fillStyle='#ece9dc';c.fillRect(0,0,512,128);c.fillStyle='#14202b';c.font='bold 80px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(text,256,69,480);const texture=new THREE.CanvasTexture(canvas);texture.encoding=THREE.sRGBEncoding;const material=new THREE.MeshStandardMaterial({map:texture,roughness:.65});civicLabelMaterials.set(text,material);return material}
-function civicLoft(sections,material,o){const positions=[],tri=(a,b,c)=>positions.push(...a,...c,...b),rings=sections.map(([x,y,w,bottom,base=w])=>[[x,bottom,-base],[x,y,-w],[x,y,w],[x,bottom,base]]);
- for(let i=1;i<rings.length;i++)for(let j=0;j<4;j++){const k=(j+1)%4,a=rings[i-1][j],b=rings[i][j],c=rings[i][k],d=rings[i-1][k];tri(a,b,c);tri(a,c,d)}const a=rings[0],b=rings[rings.length-1];tri(a[0],a[1],a[2]);tri(a[0],a[2],a[3]);tri(b[0],b[2],b[1]);tri(b[0],b[3],b[2]);
- const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.computeVertexNormals();const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=mesh.receiveShadow=true;o.add(mesh);return mesh}
-function civicWheels(o,t,wheels,p){const key=t.civic;let geometry=civicWheelGeometry.get(key);if(!geometry){geometry={tyre:new THREE.CylinderGeometry(t.r,t.r,.21,20).rotateX(PI/2),rim:new THREE.CylinderGeometry(t.r*.61,t.r*.61,.215,20).rotateX(PI/2)};civicWheelGeometry.set(key,geometry)}
- for(const x of[-t.wb/2,t.wb/2])for(const side of[-1,1]){const steer=new THREE.Group(),spin=new THREE.Group();steer.position.set(x,t.r,side*(t.W/2-.06));steer.add(spin);o.add(steer);const tyre=new THREE.Mesh(geometry.tyre,RUB),rim=new THREE.Mesh(geometry.rim,mat('#252d34'));tyre.castShadow=true;spin.add(tyre,rim);
-  for(let i=0;i<p.spokes;i++){const angle=i/p.spokes*2*PI,b=bx('#b9c2c8',t.civic=='ek'?.045:.035,t.r*.55,.025,Math.cos(angle)*t.r*.3,Math.sin(angle)*t.r*.3,side*.12,spin);b.rotation.z=angle-PI/2}bx('#d1d5d6',.09,.09,.25,0,0,0,spin);wheels.push({steer,spin,front:x>0})}}
-function civicBody(o,t,wheels){const p=civicProfiles[t.civic],paint=carMat(t.paint),W=t.W,L=t.L,ek=t.civic=='ek',fb=t.civic=='fb';
- civicLoft([[-L/2,p.deck-.13,W*.45,.39],[-L/2+.22,p.deck,W*.49,.29],[p.rear,.96,W*.5,.28],[p.front,.91,W*.5,.28],[L/2-.25,p.nose+.08,W*.48,.33],[L/2,p.nose,W*.44,.4]],paint,o);
- civicLoft([[p.rear,.97,W*.43,.93],[p.roofRear,p.roof,W*.37,.93,W*.43],[p.roofFront,p.roof,W*.37,.91,W*.43],[p.front,.94,W*.43,.9]],GLASS,o);
- bx(paint,p.roofFront-p.roofRear+.08,.055,W*.76,(p.roofFront+p.roofRear)/2,p.roof+.015,0,o);
- // Thin A/C pillars and a solid B pillar keep the windows from reading as a single box.
- for(const side of[-1,1]){const z=side*W*.435;for(const[a,b]of[[[p.rear,.97],[p.roofRear,p.roof]],[[p.roofFront,p.roof],[p.front,.94]]]){const dx=b[0]-a[0],dy=b[1]-a[1],bar=bx(paint,Math.hypot(dx,dy),.055,.07,(a[0]+b[0])/2,(a[1]+b[1])/2,z*.91,o);bar.rotation.z=Math.atan2(dy,dx)}
-  bx('#1c242a',.075,p.roof-.96,.045,-.25,(p.roof+.96)/2,z*.94,o);
-  bx(paint,L*.67,.08,.06,-.02,.4,side*(W/2+.008),o);bx('#313b43',L*.7,.025,.025,-.04,.79,side*(W/2+.014),o);
-  for(const x of[-.77,.54]){bx('#aeb8bc',.16,.035,.035,x,.91,side*(W/2+.018),o);bx('#34404a',.018,.4,.012,x-.35,.63,side*(W/2+.014),o)}
-  bx(paint,.25,.12,.16,p.front-.28,1.02,side*(W/2+.04),o)}
- const grilleWidth=ek?W*.43:fb?W*.53:W*.46;bx('#17212b',.035,ek?.14:.13,grilleWidth,L/2+.012,p.nose-.06,0,o);bx('#abb5bc',.045,.025,grilleWidth,L/2+.03,p.nose+.018,0,o);
- bx('#18222a',.04,.13,W*.65,L/2+.01,.45,0,o);bx('#c1c8cb',.052,.12,.08,L/2+.04,p.nose-.035,0,o);
- if(ek){for(const side of[-1,1]){bx(paint,.09,.14,.07,-L/2+.36,1.01,side*.49,o)}bx(paint,.3,.065,W*.82,-L/2+.35,1.115,0,o)}
- else if(!fb)bx(paint,.1,.045,W*.83,-L/2+.08,p.deck-.02,0,o);
- for(const direction of[-1,1]){const plate=new THREE.Mesh(new THREE.PlaneGeometry(.55,.135),civicLabel(p.plate));plate.position.set(direction*(L/2+.047),direction>0?.43:.54,0);plate.rotation.y=direction*PI/2;o.add(plate)}
+function civicMesh(o,key,material,create){let geometry=civicGeometry.get(key);if(!geometry){geometry=create();civicGeometry.set(key,geometry)}const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=mesh.receiveShadow=true;o.add(mesh);return mesh}
+function civicGrid(rows,cols,point,reverse=false){const positions=[],uvs=[],indices=[];for(let i=0;i<=rows;i++)for(let j=0;j<=cols;j++){const p=point(i/rows,j/cols);positions.push(...p);uvs.push(i/rows,j/cols)}
+ for(let i=0;i<rows;i++)for(let j=0;j<cols;j++){const a=i*(cols+1)+j,b=a+cols+1,c=b+1,d=a+1;if(reverse)indices.push(a,c,b,a,d,c);else indices.push(a,b,c,a,c,d)}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));g.setIndex(indices);g.computeVertexNormals();return g}
+function civicPolygon(points,reverse=false){const contour=points.map(p=>new THREE.Vector2(p[0],p[1])),faces=THREE.ShapeUtils.triangulateShape(contour,[]),positions=[];for(const face of faces){const order=reverse?[face[0],face[2],face[1]]:face;for(const i of order)positions.push(...points[i])}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.computeVertexNormals();return g}
+function civicBar(o,a,b,width,material){const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),delta=end.clone().sub(start),mesh=new THREE.Mesh(box,material);mesh.scale.set(width,delta.length(),width);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());mesh.position.copy(start.add(end).multiplyScalar(.5));mesh.castShadow=true;o.add(mesh);return mesh}
+function civicCross(t,p,x){const knots=[[-t.L/2,p.deck,t.W*.455],[-t.L/2+.24,p.deck+.025,t.W*.493],[p.rear-.1,1.01,t.W*.5],[p.front-.06,1.005,t.W*.5],[t.L/2-.34,p.nose+.045,t.W*.485],[t.L/2,p.nose,t.W*.455]];let i=1;while(i<knots.length-1&&x>knots[i][0])i++;const a=knots[i-1],b=knots[i],u=Math.max(0,Math.min(1,(x-a[0])/(b[0]-a[0]))),v=u*u*(3-2*u);return{y:a[1]+(b[1]-a[1])*v,w:a[2]+(b[2]-a[2])*v}}
+function civicEndX(t,direction,z){return direction*(t.L/2-.14*(z/(t.W*.455))**2)}
+function civicFace(v,key,direction,points,material,depth=.012){const mesh=civicMesh(v.o,v.t.civic+':'+key,material,()=>{
+ const shape=new THREE.ShapeGeometry(new THREE.Shape(points.map(p=>new THREE.Vector2(p[0],p[1])))),a=shape.attributes.position,indices=shape.index.array,positions=[],normals=[];
+ // Subdivide the patch so it follows the bumper curvature instead of sinking into it.
+ const vertex=(p,q,r,u,w)=>{const z=p[0]+(q[0]-p[0])*u+(r[0]-p[0])*w,y=p[1]+(q[1]-p[1])*u+(r[1]-p[1])*w;return[civicEndX(v.t,direction,z)+direction*depth,y,z]},emit=(a,b,c)=>{for(const p of direction>0?[a,c,b]:[a,b,c]){positions.push(...p);const n=new THREE.Vector3(direction,0,.28*p[2]/(v.t.W*.455)**2).normalize();normals.push(n.x,n.y,n.z)}};
+ for(let k=0;k<indices.length;k+=3){const p=[a.getX(indices[k]),a.getY(indices[k])],q=[a.getX(indices[k+1]),a.getY(indices[k+1])],r=[a.getX(indices[k+2]),a.getY(indices[k+2])],n=6;
+  for(let i=0;i<n;i++)for(let j=0;j<n-i;j++){const A=vertex(p,q,r,i/n,j/n),B=vertex(p,q,r,(i+1)/n,j/n),C=vertex(p,q,r,i/n,(j+1)/n);emit(A,B,C);if(i+j<n-1)emit(B,vertex(p,q,r,(i+1)/n,(j+1)/n),C)}}
+ shape.dispose();const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));return geometry});mesh.castShadow=mesh.receiveShadow=false;return mesh}
+function civicWheels(o,t,wheels,p){let g=civicWheelGeometry.get(t.civic);if(!g){g={tyre:new THREE.CylinderGeometry(t.r-.012,t.r-.012,.19,24).rotateX(PI/2),sidewall:new THREE.TorusGeometry(t.r-.045,.045,6,24),rim:new THREE.TorusGeometry(t.r*.61,.014,6,20),rotor:new THREE.CylinderGeometry(t.r*.5,t.r*.5,.012,20).rotateX(PI/2)};civicWheelGeometry.set(t.civic,g)}
+ for(const x of[-t.wb/2,t.wb/2])for(const side of[-1,1]){const steer=new THREE.Group(),spin=new THREE.Group();steer.position.set(x,t.r,side*(t.W/2-.065));steer.add(spin);o.add(steer);const tyre=new THREE.Mesh(g.tyre,RUB),rotor=new THREE.Mesh(g.rotor,civicChrome);spin.add(tyre,rotor);tyre.castShadow=true;
+  for(const s of[-1,1]){const wall=new THREE.Mesh(g.sidewall,RUB);wall.position.z=s*.064;spin.add(wall)}const rim=new THREE.Mesh(g.rim,civicChrome);rim.position.z=side*.112;spin.add(rim);
+  for(let i=0;i<p.spokes;i++){const angle=t.civic=='fd'?Math.floor(i/2)/5*2*PI+(i%2?.065:-.065):i/p.spokes*2*PI,b=bx(civicChrome,t.civic=='ek'?.05:.035,t.r*.58,.025,Math.cos(angle)*t.r*.3,Math.sin(angle)*t.r*.3,side*.113,spin);b.rotation.z=angle-PI/2}
+  bx('#b9c2c8',.075,.075,.245,0,0,0,spin);bx('#555d63',.07,.15,.065,t.r*.36,0,side*.015,spin);wheels.push({steer,spin,front:x>0})}}
+function civicBody(o,t,wheels){const p=civicProfiles[t.civic],paint=carMat(t.paint),W=t.W,L=t.L,ek=t.civic=='ek',id=t.civic,corner=x=>Math.max(0,1-(L/2-Math.abs(x))/.42)**2;
+ // Continuous body sections replace flat boxes; open wheel arches expose the tyres.
+ civicMesh(o,id+':hood-deck',paint,()=>civicGrid(84,16,(u,v)=>{const x=-L/2+u*L,a=v*2-1,c=civicCross(t,p,x);return[x-Math.sign(x)*.14*corner(x)*a*a,c.y+.025*(1-a*a),a*c.w]},true));
+ for(const side of[-1,1]){civicMesh(o,id+':side:'+side,paint,()=>civicGrid(112,6,(u,v)=>{const x=-L/2+u*L,c=civicCross(t,p,x),radius=t.r+.046;let bottom=.285;for(const axle of[-t.wb/2,t.wb/2]){const d=x-axle;if(Math.abs(d)<radius)bottom=Math.max(bottom,t.r+Math.sqrt(radius*radius-d*d))}return[x-Math.sign(x)*.14*corner(x),bottom+(c.y-bottom)*v,side*(c.w-.045*(1-v)**2)]},side<0));
+  for(const axle of[-t.wb/2,t.wb/2])civicMesh(o,id+':arch:'+side+':'+axle,paint,()=>{const points=[];for(let i=0;i<=32;i++){const a=i/32*PI;points.push(new THREE.Vector3(axle+Math.cos(a)*(t.r+.046),t.r+Math.sin(a)*(t.r+.046),side*(W/2-.015)))}return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),32,.012,5,false)})}
+ for(const direction of[-1,1])civicMesh(o,id+':bumper:'+direction,paint,()=>civicGrid(16,8,(u,v)=>{const z=(u*2-1)*W*.455,top=direction>0?p.nose:p.deck;return[civicEndX(t,direction,z),.335+(top-.335)*v+.02*(1-(u*2-1)**2)*v,z]},direction>0));
+ bx(civicTrim,L*.85,.06,W*.7,0,.3,0,o);
+ // Crowned roof, curved windscreens and distinct front/rear door glass.
+ civicMesh(o,id+':roof',paint,()=>civicGrid(18,16,(u,v)=>{const a=u*2-1,b=v*2-1;return[p.roofRear+(p.roofFront-p.roofRear)*u,p.roof-.025*a*a-.045*b*b,b*W*.367]},true));
+ for(const direction of[-1,1])civicMesh(o,id+':screen:'+direction,civicGlass,()=>civicGrid(12,18,(u,v)=>{const a=v*2-1,base=direction>0?p.front:p.rear,top=direction>0?p.roofFront:p.roofRear;return[base+(top-base)*u+direction*.025*Math.sin(u*PI)*(1-a*a),1.025+(p.roof-.025-1.025)*u-.045*a*a*u,a*W*(.429-.062*u)]},direction<0));
+ const sideZ=(y,side)=>side*(W*(.43-.063*Math.max(0,Math.min(1,(y-1.01)/(p.roof-1.01))))+.008);
+ for(const side of[-1,1]){
+  const glass=[[[p.rear+.12,1.035],[p.roofRear+.06,p.roof-.07],[-.28,p.roof-.055],[-.28,1.035]],[[-.19,1.035],[-.19,p.roof-.055],[p.roofFront-.035,p.roof-.07],[p.front-.09,1.035]]];
+  for(let i=0;i<glass.length;i++){const points=glass[i].map(([x,y])=>[x,y,sideZ(y,side)]);civicMesh(o,id+':door-glass:'+side+':'+i,civicGlass,()=>civicPolygon(points,side<0))}
+  for(const[a,b,width]of[[[p.rear,1.015],[p.roofRear,p.roof-.025],.065],[[p.roofFront,p.roof-.025],[p.front,1.015],.046],[[-.235,1.02],[-.235,p.roof-.035],.072]])civicBar(o,[a[0],a[1],sideZ(a[1],side)],[b[0],b[1],sideZ(b[1],side)],width,width==.072?civicTrim:paint);
+  civicBar(o,[p.rear,1.018,sideZ(1.018,side)],[p.front,1.018,sideZ(1.018,side)],.027,ek?civicTrim:civicChrome);
+  for(const x of[-.77,.52]){bx(ek?civicTrim:paint,.15,.042,.036,x,.973,side*(W/2+.004),o);civicBar(o,[x-.3,.38,side*(W/2-.015)],[x-.3,.95,side*(W/2+.006)],.009,civicTrim)}
+  if(ek)bx(civicTrim,L*.72,.038,.035,-.04,.76,side*(W/2+.005),o);else civicBar(o,[-L*.38,.77,side*(W/2+.006)],[L*.36,.75,side*(W/2+.005)],.008,paint);
+  const mirror=bx(paint,.22,.105,.135,p.front-.24,1.095,side*(W/2+.055),o);mirror.rotation.y=side*.12;bx(civicGlass,.02,.075,.11,p.front-.36,1.095,side*(W/2+.055),o)
+ }
+ // Two wipers, rear-window demister, exhaust and a generation-appropriate lip/wing.
+ for(const side of[-1,1])civicBar(o,[p.front-.08,1.07,side*W*.29],[p.front-.24,1.12,side*W*.04],.013,civicTrim);
+ for(let i=1;i<=5;i++){const u=i/7,x=p.rear+(p.roofRear-p.rear)*u,y=1.025+(p.roof-.05-1.025)*u,w=W*(.415-.065*u);civicBar(o,[x-.006,y,-w],[x-.006,y,w],.0035,mat('#657079'))}
+ bx('#68737a',.15,.08,.11,-L/2-.025,.32,-W*.29,o);
+ if(ek){for(const side of[-1,1])bx(paint,.08,.12,.065,-L/2+.38,p.deck+.1,side*.48,o);bx(paint,.24,.045,W*.8,-L/2+.36,p.deck+.18,0,o)}
+ for(const direction of[-1,1]){const plate=new THREE.Mesh(new THREE.PlaneGeometry(.52,.115),civicLabel(p.plate));plate.position.set(direction*(L/2+.018),direction>0?.48:.59,0);plate.rotation.y=direction*PI/2;o.add(plate)}
  civicWheels(o,t,wheels,p)}
-function civicLights(v){const t=v.t,p=civicProfiles[t.civic],L=t.L,W=t.W,fb=t.civic=='fb',ek=t.civic=='ek';
- for(const side of[-1,1]){const z=side*W*.335,width=ek?.42:fb?.48:.53,y=p.nose-.055;
-  const lamp=bx(headMat,.055,ek?.155:fb?.17:.115,width,L/2+.018,y,z,v.o);lamp.rotation.x=side*(ek?0:fb?.07:-.18);lamp.castShadow=false;
-  if(ek)bx(ambMat,.06,.13,.09,L/2+.022,y,side*W*.43,v.o).castShadow=false;
-  bx(v.tm,.055,fb?.13:ek?.18:.15,fb?.48:.43,-L/2-.02,p.deck-.17,z,v.o).castShadow=false;
-  if(fb)bx(v.tm,.06,.25,.095,-L/2-.024,p.deck-.12,side*W*.43,v.o).castShadow=false;
-  if(!fb&&!ek)bx(v.tm,.055,.1,.21,-L/2-.024,p.deck-.27,side*W*.32,v.o).castShadow=false;
- }bx(v.rm,.06,.075,.2,-L/2-.026,p.deck-.2,0,v.o).castShadow=false}
+function civicLights(v){const t=v.t,p=civicProfiles[t.civic],W=t.W,ek=t.civic=='ek',fb=t.civic=='fb',points=(side,list)=>list.map(([z,y])=>[z*side,y]),face=(key,dir,list,material)=>{const depth=key.includes('badge')?.029:key.includes('indicator')?.026:key.includes('reflector')||key.includes('core')?.023:key.includes('chrome')||key.includes('clear')||key.includes('octagon')?.019:key.includes('lens')||key.startsWith('fog')?.014:.008;return civicFace(v,key,dir,list,material,depth)};
+ // The front lamps are shaped housings with separate reflectors, not glowing bars.
+ for(const side of[-1,1]){const outer=W*.455,inner=ek?.31:fb?.32:.30;
+  const shape=ek?[[inner,.735],[inner+.025,.86],[outer-.07,.87],[outer,.815],[outer-.025,.72]]:fb?[[inner,.72],[inner+.045,.85],[outer-.045,.92],[outer,.82],[outer-.04,.705]]:[[inner,.705],[inner+.05,.82],[outer-.075,.88],[outer,.805],[outer-.025,.69]];
+  for(const point of shape)point[1]=Math.min(point[1],p.nose+.008);face('head-housing'+side,1,points(side,shape),civicTrim);const lens=shape.map(([z,y])=>[(z-inner)*.91+inner+.018,(y-.79)*.8+.79]);face('head-lens'+side,1,points(side,lens),civicLens);
+  for(const[z,y,radius]of[[W*.31,.785,.044],[W*.4,.792,.034]]){const ring=[];for(let i=0;i<16;i++){const a=i/16*PI*2;ring.push([side*z+Math.cos(a)*radius,y+Math.sin(a)*radius])}face('reflector'+side+z,1,ring,headMat)}
+  const indicator=face('front-indicator'+side,1,points(side,[[outer-.065,.736],[outer-.025,.745],[outer-.018,.805],[outer-.057,.817]]),ambMat);indicator.side_=side;indicator.visible=false;v.il.push(indicator);
+  if(!ek){face('fog-housing'+side,1,points(side,[[.49,.37],[.49,.55],[.72,.54],[.74,.395]]),civicTrim);const oval=[];for(let i=0;i<20;i++){const a=i/20*PI*2;oval.push([side*.61+Math.cos(a)*.065,.455+Math.sin(a)*.038])}face('fog'+side,1,oval,civicLens)}
+  if(ek){face('tail'+side,-1,points(side,[[.34,.73],[.34,.935],[outer-.035,.94],[outer,.89],[outer-.01,.725]]),v.tm);face('tail-clear'+side,-1,points(side,[[.36,.775],[.36,.817],[outer-.035,.815],[outer-.035,.775]]),civicClear)}
+  else if(fb){face('tail'+side,-1,points(side,[[.35,.79],[.43,.965],[outer-.055,.985],[outer,.89],[outer-.012,.765]]),v.tm);face('tail-clear'+side,-1,points(side,[[.385,.815],[.43,.855],[outer-.035,.86],[outer-.035,.815]]),civicClear)}
+  else{face('tail-housing'+side,-1,points(side,[[.31,.785],[.31,.967],[outer-.035,.97],[outer,.89],[outer-.015,.78]]),v.tm);for(const[z,r]of[[.405,.075],[.64,.09]]){const octagon=[];for(let i=0;i<8;i++){const a=i/8*PI*2+PI/8;octagon.push([side*z+Math.cos(a)*r,.88+Math.sin(a)*r])}face('tail-octagon'+side+z,-1,octagon,civicClear);const core=octagon.map(([x,y])=>[side*z+(x-side*z)*.67,.88+(y-.88)*.67]);face('tail-core'+side+z,-1,core,v.tm)}}
+  const turn=face('rear-indicator'+side,-1,points(side,[[.37,.79],[.37,.82],[.49,.82],[.49,.79]]),ambMat);turn.side_=side;turn.visible=false;v.il.push(turn);
+ }
+ const upper=ek?[[.30,.86],[.28,.72],[-.28,.72],[-.30,.86]]:fb?[[.40,.86],[.31,.67],[-.31,.67],[-.40,.86]]:[[.37,.82],[.24,.70],[-.24,.70],[-.37,.82]];
+ face('grille',1,upper,civicTrim);face('lower-intake',1,[[.39,.40],[.43,.55],[-.43,.55],[-.39,.40]],civicTrim);
+ const chromeY=ek?.855:fb?.855:.82;for(const side of[-1,1])face('grille-chrome'+side,1,points(side,[[.045,chromeY-.025],[.045,chromeY],[fb?.39:.34,chromeY],[fb?.37:.32,chromeY-.022]]),civicChrome);
+ if(fb)face('grille-lower-chrome',1,[[.31,.724],[.32,.74],[-.32,.74],[-.31,.724]],civicChrome);
+ // A small H emblem is assembled from thin chrome strokes.
+ for(const direction of[-1,1]){const y=direction>0?(fb?.77:ek?.79:.755):p.deck-.08;for(const list of[[[-.043,y-.048],[-.052,y+.048],[-.032,y+.048],[-.022,y-.048]],[[.022,y-.048],[.032,y+.048],[.052,y+.048],[.043,y-.048]],[[-.03,y-.005],[-.03,y+.013],[.03,y+.013],[.03,y-.005]]])face('badge'+direction+list[0][0],direction,list,civicChrome)}
+ face('reverse',-1,[[-.13,.735],[-.13,.77],[.13,.77],[.13,.735]],v.rm)
+}
 function mkCar(n){const t=TY[n],o=new THREE.Group(),wheels=[],col=['#e33','#fd0','#0cf','#fff','#f6c','#3e6'][R()*6|0];o.rotation.order='YXZ';
  if(t.civic)civicBody(o,t,wheels);else if(n=='Kaze R')kaze(o,t);else{bx(carMat(col),t.L,t.H,t.W,0,.4+t.H/2,0,o);
  if(n=='Bike'){bx(dark,.9,.3,.5,-.2,.4+t.H+.15,0,o);for(const x of[-.8,.8])bx(RUB,.7,.7,.2,x,.35,0,o)}
@@ -286,7 +324,7 @@ function mkCar(n){const t=TY[n],o=new THREE.Group(),wheels=[],col=['#e33','#fd0'
  }S.add(o);const v={x:0,z:0,a:0,vx:0,vz:0,st:0,roll:0,pitch:0,t,n,o,wheels,ai:null,dmg:0,ind:0,il:[],tm:new THREE.MeshBasicMaterial({color:0x330000,toneMapped:false}),rm:new THREE.MeshBasicMaterial({color:0x111111,toneMapped:false})};
  const y=t.H*.5+.45,zs=n=='Bike'?[0]:[-t.W/2+.35,t.W/2-.35],lb=(m_,sx,sy,sz,x,yy,z)=>{const b=bx(m_,sx,sy,sz,x,yy,z,o);b.castShadow=false;return b};
  if(t.civic)civicLights(v);else{for(const z of zs){lb(headMat,.06,.16,.4,t.L/2+.02,y,z);lb(v.tm,.06,.15,.4,-t.L/2-.02,y+.08,z)}lb(v.rm,.06,.1,.3,-t.L/2-.02,y-.07,0)}
- for(const s of[-1,1])for(const x of[t.L/2+.01,-t.L/2-.01]){const b=lb(ambMat,.07,.09,.14,x,y+(x>0?.14:-.1),s*(t.W/2-.08));b.side_=s;b.visible=false;v.il.push(b)}
+ if(!t.civic)for(const s of[-1,1])for(const x of[t.L/2+.01,-t.L/2-.01]){const b=lb(ambMat,.07,.09,.14,x,y+(x>0?.14:-.1),s*(t.W/2-.08));b.side_=s;b.visible=false;v.il.push(b)}
  cars.push(v);return v}
 const types=Object.keys(TY),civicNames=types.filter(n=>TY[n].civic),parkedTypes=types.filter(n=>n!='Kaze R'),trafficTypes=types.filter(n=>n!='Bike'&&n!='Kaze R'),rt=()=>parkedTypes[R()*parkedTypes.length|0];
 function lanePoint(e,i,dir=1,offset=null){const p=e.points[i],a=e.points[Math.max(0,i-1)],b=e.points[Math.min(e.points.length-1,i+1)],d=Math.hypot(b.x-a.x,b.z-a.z)||1,l=offset==null?(e.width==ROAD.boulevard?e.width*.34:e.width*.25):offset;

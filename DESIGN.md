@@ -2,7 +2,7 @@
 
 ## Overview
 
-A browser driving sandbox with pastel coastal architecture, neon accents, palms and warm sunset lighting. The world is the main surface; keep controls compact and leave room to drive. Preserve the existing low-poly style.
+A browser driving sandbox with pastel coastal architecture, neon accents, palms and warm sunset lighting. The world is the main surface; keep controls compact and leave room to drive. Preserve the existing low-poly world; requested vehicle replicas can use curved surfaces and finer exterior detail to follow their references.
 
 ## Colors
 
@@ -31,6 +31,10 @@ The player panel sits at the upper left and the minimap at the upper right with 
 `advanceSimulation()` advances gameplay at 60 Hz independently of rendering; pause/hidden states clear accumulated time and long gaps are capped. Vehicle tyres integrate in three substeps. Speed-sensitive steering meters available wheel lock, while tyre forces determine yaw above parking speed. Keep sedan proportions close to an ordinary passenger car and show front-wheel steering and wheel rotation. Body roll and pitch use damped suspension motion; chase-camera yaw follows promptly enough to make steering readable. Preserve keyboard and analog touch parity when tuning the model.
 
 The Civic FD (2009), FB (2013) and SiR (1997) use generation-specific procedural body/cabin profiles, front/rear lights, grille and wheel details. Default paints are silver, pearl white and blue respectively; the SiR has a rear wing and amber front corners. Keep the FD/FB as 1.8 L commuter interpretations and the lighter SiR as a high-revving B16A-style interpretation. Per-model torque curves and dimensions live in `TY`; `torqueAt()` interpolates engine curves while preserving the generic model for existing cars. Guaranteed parked Civics line the starting coastal road; also include them in random parked and traffic pools. Long vehicle names wrap in the existing HUD. Preserve collision/effects behavior across every model.
+
+Exterior references and regional choices are recorded in [CIVIC_REFERENCES.md](references/CIVIC_REFERENCES.md). Use Asian-market FD/FB details and a pre-facelift EK4 sedan silhouette. Curved body grids include open wheel arches; crowned roofs, curved windscreens, separate side glass and thin pillars replace opaque box cabins. Lamp/grille patches follow the bumper curvature and use separate depth layers to prevent flicker. FD facelift rear lamps have octagonal elements; the earlier Asian FB uses its own rear cluster outline rather than the North American 2013 facelift's L-shaped arrangement. Cache detailed geometry per generation and retain existing physical collision dimensions and wheel animation. These are approximate reconstructions; do not label them certified 1:1 assets.
+
+Road overlay materials use polygon depth bias to prevent the terrain from showing through at shallow camera angles in the postprocessing depth buffer. Thin vehicle lamp/grille patches do not cast or receive shadows, avoiding shadow acne on closely spaced layers; the body still casts and receives shadows.
 
 `architecture()` owns building type construction; `buildingBatches` instances shared geometry and materials. Reserve mall tiles before terrain generation and use the same occupied tiles for collisions and scenery placement. Keep façades, awnings, porches and roofs inside their reserved lots. Cache sign textures by text/colors and register luminous signs and windows with the existing day/night material system.
 
