@@ -227,7 +227,7 @@ Sports:{L:4.4,W:2,H:.8,st:.5,m:1300,Tp:330,red:7500,gr:[3.2,2.2,1.6,1.25,1,.82],
 Sedan:{L:4.55,W:1.82,H:.6,wb:2.7,front:.59,cg:.52,iz:2350,cf:90000,cr:82000,st:.59,steerRate:2.3,m:1430,Tp:210,red:6500,gr:[3.62,2.05,1.37,1.03,.82,.68],fd:3.94,cda:.64,dr:'F',r:.32},
 Van:{L:5.2,W:2.3,H:2.2,st:.5,m:2200,Tp:300,red:4800,gr:[3.9,2.3,1.5,1,.8],fd:4.1,cda:1.4,dr:'R'},
 Bike:{L:2.2,W:.7,H:.6,st:.7,m:240,Tp:95,red:11500,gr:[2.8,2,1.6,1.35,1.18,1.05],fd:6.2,cda:.4,dr:'R',r:.3},
-'Honda Civic FD 2009':{civic:'fd',eff:.82,paint:'#aeb9c6',L:4.54,W:1.755,H:.6,wb:2.7,front:.6,cg:.49,iz:2100,cf:81000,cr:75000,st:.59,steerRate:2.4,m:1240,Tp:174,red:6800,gr:[2.666,1.534,1.022,.721,.525],fd:4.437,cda:.58,dr:'F',r:.31,curve:[[900,100],[2000,145],[3500,168],[4300,174],[5600,174],[6500,145],[6800,132]]},
+'Honda Civic FD 2009':{civic:'fd',eff:.82,paint:'#f4f1df',L:4.54,W:1.755,H:.6,wb:2.7,front:.6,cg:.49,iz:2100,cf:81000,cr:75000,st:.59,steerRate:2.4,m:1240,Tp:174,red:6800,gr:[2.666,1.534,1.022,.721,.525],fd:4.437,cda:.58,dr:'F',r:.31,curve:[[900,100],[2000,145],[3500,168],[4300,174],[5600,174],[6500,145],[6800,132]]},
 'Honda Civic FB 2013':{civic:'fb',eff:.82,paint:'#e9e8df',L:4.525,W:1.755,H:.6,wb:2.67,front:.6,cg:.5,iz:2140,cf:82000,cr:76000,st:.59,steerRate:2.3,m:1270,Tp:174,red:6800,gr:[2.666,1.534,1.022,.721,.525],fd:4.437,cda:.57,dr:'F',r:.31,curve:[[900,105],[2000,150],[3500,169],[4300,174],[5600,174],[6500,145],[6800,132]]},
 'Honda Civic SiR 1997':{civic:'ek',eff:.88,paint:'#2452a2',L:4.45,W:1.695,H:.56,wb:2.62,front:.61,cg:.46,iz:1740,cf:79000,cr:74000,st:.6,steerRate:2.7,m:1130,Tp:157,red:8200,gr:[3.23,1.9,1.36,1.034,.787],fd:4.4,cda:.61,dr:'F',r:.296,curve:[[900,78],[2500,108],[4500,130],[5500,143],[7000,157],[7800,151],[8200,139]]},
 'Kaze R':{L:4.5,W:2,H:.85,st:.62,m:1270,Tp:215,red:8400,gr:[3.27,2.13,1.52,1.15,.92,.74],fd:4.76,cda:.66,dr:'F'}};
@@ -243,7 +243,7 @@ function kaze(o,t){const c=carMat('#1f6f8b'),L=t.L,W=t.W;
 const cars=[],dark=GLASS;
 // Exterior profiles follow the regional references in references/CIVIC_REFERENCES.md.
 const civicProfiles={
- fd:{roof:1.435,rear:-1.35,roofRear:-.65,roofFront:.37,front:1.26,nose:.84,deck:.99,plate:'FD 2009',spokes:10},
+ fd:{roof:1.435,rear:-1.35,roofRear:-.65,roofFront:.37,front:1.26,nose:.91,deck:.99,plate:'TYPE R',spokes:7},
  fb:{roof:1.435,rear:-1.25,roofRear:-.66,roofFront:.32,front:1.17,nose:.875,deck:1.015,plate:'FB 2013',spokes:5},
  ek:{roof:1.39,rear:-1.18,roofRear:-.65,roofFront:.3,front:1.08,nose:.835,deck:.965,plate:'SiR 1997',spokes:5}
 };
@@ -264,11 +264,11 @@ function civicFace(v,key,direction,points,material,depth=.012){const mesh=civicM
  for(let k=0;k<indices.length;k+=3){const p=[a.getX(indices[k]),a.getY(indices[k])],q=[a.getX(indices[k+1]),a.getY(indices[k+1])],r=[a.getX(indices[k+2]),a.getY(indices[k+2])],n=6;
   for(let i=0;i<n;i++)for(let j=0;j<n-i;j++){const A=vertex(p,q,r,i/n,j/n),B=vertex(p,q,r,(i+1)/n,j/n),C=vertex(p,q,r,i/n,(j+1)/n);emit(A,B,C);if(i+j<n-1)emit(B,vertex(p,q,r,(i+1)/n,(j+1)/n),C)}}
  shape.dispose();const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));return geometry});mesh.castShadow=mesh.receiveShadow=false;return mesh}
-function civicWheels(o,t,wheels,p){let g=civicWheelGeometry.get(t.civic);if(!g){g={tyre:new THREE.CylinderGeometry(t.r-.012,t.r-.012,.19,24).rotateX(PI/2),sidewall:new THREE.TorusGeometry(t.r-.045,.045,6,24),rim:new THREE.TorusGeometry(t.r*.61,.014,6,20),rotor:new THREE.CylinderGeometry(t.r*.5,t.r*.5,.012,20).rotateX(PI/2)};civicWheelGeometry.set(t.civic,g)}
+function civicWheels(o,t,wheels,p){let g=civicWheelGeometry.get(t.civic);if(!g){g={tyre:new THREE.CylinderGeometry(t.r-.012,t.r-.012,.19,24).rotateX(PI/2),sidewall:new THREE.TorusGeometry(t.r-.045,.045,6,24),rim:new THREE.TorusGeometry(t.r*(t.civic==='fd'?.73:.61),.014,8,32),rotor:new THREE.CylinderGeometry(t.r*.5,t.r*.5,.012,20).rotateX(PI/2)};civicWheelGeometry.set(t.civic,g)}
  for(const x of[-t.wb/2,t.wb/2])for(const side of[-1,1]){const steer=new THREE.Group(),spin=new THREE.Group();steer.position.set(x,t.r,side*(t.W/2-.065));steer.add(spin);o.add(steer);const tyre=new THREE.Mesh(g.tyre,RUB),rotor=new THREE.Mesh(g.rotor,civicChrome);spin.add(tyre,rotor);tyre.castShadow=true;
-  for(const s of[-1,1]){const wall=new THREE.Mesh(g.sidewall,RUB);wall.position.z=s*.064;spin.add(wall)}const rim=new THREE.Mesh(g.rim,civicChrome);rim.position.z=side*.112;spin.add(rim);
-  for(let i=0;i<p.spokes;i++){const angle=t.civic=='fd'?Math.floor(i/2)/5*2*PI+(i%2?.065:-.065):i/p.spokes*2*PI,b=bx(civicChrome,t.civic=='ek'?.05:.035,t.r*.58,.025,Math.cos(angle)*t.r*.3,Math.sin(angle)*t.r*.3,side*.113,spin);b.rotation.z=angle-PI/2}
-  bx('#b9c2c8',.075,.075,.245,0,0,0,spin);bx('#555d63',.07,.15,.065,t.r*.36,0,side*.015,spin);wheels.push({steer,spin,front:x>0})}}
+  for(const s of[-1,1]){const wall=new THREE.Mesh(g.sidewall,RUB);wall.position.z=s*.064;spin.add(wall)}const rim=new THREE.Mesh(g.rim,t.civic==='fd'?fdWheelPaint:civicChrome);rim.position.z=side*.112;spin.add(rim);
+  for(let i=0;i<p.spokes;i++){const angle=i/p.spokes*2*PI,b=bx(t.civic==='fd'?fdWheelPaint:civicChrome,t.civic==='fd'?.047:t.civic=='ek'?.05:.035,t.r*(t.civic==='fd'?.68:.58),.025,Math.cos(angle)*t.r*(t.civic==='fd'?.35:.3),Math.sin(angle)*t.r*(t.civic==='fd'?.35:.3),side*.113,spin);b.rotation.z=angle-PI/2}
+  bx(t.civic==='fd'?fdWheelPaint:'#b9c2c8',.075,.075,.245,0,0,0,spin);if(t.civic==='fd'){const cap=new THREE.Mesh(new THREE.CircleGeometry(.026,20),fdBadge);cap.position.z=side*.132;cap.rotation.y=side<0?PI:0;spin.add(cap);for(let lug=0;lug<5;lug++){const a=lug/5*PI*2;bx(civicChrome,.015,.015,.012,Math.cos(a)*.055,Math.sin(a)*.055,side*.132,spin)}}bx(t.civic==='fd'?'#b32226':'#555d63',.07,.15,.065,t.r*.36,0,side*.015,steer);wheels.push({steer,spin,front:x>0})}}
 function civicBody(o,t,wheels){const p=civicProfiles[t.civic],paint=carMat(t.paint),W=t.W,L=t.L,ek=t.civic=='ek',id=t.civic,corner=x=>Math.max(0,1-(L/2-Math.abs(x))/.42)**2;
  // Continuous body sections replace flat boxes; open wheel arches expose the tyres.
  civicMesh(o,id+':hood-deck',paint,()=>civicGrid(84,16,(u,v)=>{const x=-L/2+u*L,a=v*2-1,c=civicCross(t,p,x);return[x-Math.sign(x)*.14*corner(x)*a*a,c.y+.025*(1-a*a),a*c.w]},true));
@@ -281,22 +281,88 @@ function civicBody(o,t,wheels){const p=civicProfiles[t.civic],paint=carMat(t.pai
  for(const direction of[-1,1])civicMesh(o,id+':screen:'+direction,civicGlass,()=>civicGrid(12,18,(u,v)=>{const a=v*2-1,base=direction>0?p.front:p.rear,top=direction>0?p.roofFront:p.roofRear;return[base+(top-base)*u+direction*.025*Math.sin(u*PI)*(1-a*a),1.025+(p.roof-.025-1.025)*u-.045*a*a*u,a*W*(.429-.062*u)]},direction<0));
  const sideZ=(y,side)=>side*(W*(.43-.063*Math.max(0,Math.min(1,(y-1.01)/(p.roof-1.01))))+.008);
  for(const side of[-1,1]){
+  if(id==='fd'){fdCabinSide(o,t,p,paint,side);continue}
   const glass=[[[p.rear+.12,1.035],[p.roofRear+.06,p.roof-.07],[-.28,p.roof-.055],[-.28,1.035]],[[-.19,1.035],[-.19,p.roof-.055],[p.roofFront-.035,p.roof-.07],[p.front-.09,1.035]]];
   for(let i=0;i<glass.length;i++){const points=glass[i].map(([x,y])=>[x,y,sideZ(y,side)]);civicMesh(o,id+':door-glass:'+side+':'+i,civicGlass,()=>civicPolygon(points,side<0))}
   for(const[a,b,width]of[[[p.rear,1.015],[p.roofRear,p.roof-.025],.065],[[p.roofFront,p.roof-.025],[p.front,1.015],.046],[[-.235,1.02],[-.235,p.roof-.035],.072]])civicBar(o,[a[0],a[1],sideZ(a[1],side)],[b[0],b[1],sideZ(b[1],side)],width,width==.072?civicTrim:paint);
   civicBar(o,[p.rear,1.018,sideZ(1.018,side)],[p.front,1.018,sideZ(1.018,side)],.027,ek?civicTrim:civicChrome);
-  for(const x of[-.77,.52]){bx(ek?civicTrim:paint,.15,.042,.036,x,.973,side*(W/2+.004),o);civicBar(o,[x-.3,.38,side*(W/2-.015)],[x-.3,.95,side*(W/2+.006)],.009,civicTrim)}
+  for(const x of[-.77,.52]){bx(ek?civicTrim:paint,.15,.042,.036,x,.973,side*(W/2+.004),o);if(id!=='fd')civicBar(o,[x-.3,.38,side*(W/2-.015)],[x-.3,.95,side*(W/2+.006)],.009,civicTrim)}
   if(ek)bx(civicTrim,L*.72,.038,.035,-.04,.76,side*(W/2+.005),o);else civicBar(o,[-L*.38,.77,side*(W/2+.006)],[L*.36,.75,side*(W/2+.005)],.008,paint);
   const mirror=bx(paint,.22,.105,.135,p.front-.24,1.095,side*(W/2+.055),o);mirror.rotation.y=side*.12;bx(civicGlass,.02,.075,.11,p.front-.36,1.095,side*(W/2+.055),o)
  }
  // Two wipers, rear-window demister, exhaust and a generation-appropriate lip/wing.
  for(const side of[-1,1])civicBar(o,[p.front-.08,1.07,side*W*.29],[p.front-.24,1.12,side*W*.04],.013,civicTrim);
  for(let i=1;i<=5;i++){const u=i/7,x=p.rear+(p.roofRear-p.rear)*u,y=1.025+(p.roof-.05-1.025)*u,w=W*(.415-.065*u);civicBar(o,[x-.006,y,-w],[x-.006,y,w],.0035,mat('#657079'))}
- bx('#68737a',.15,.08,.11,-L/2-.025,.32,-W*.29,o);
+ if(id!=='fd')bx('#68737a',.15,.08,.11,-L/2-.025,.32,-W*.29,o);
  if(ek){for(const side of[-1,1])bx(paint,.08,.12,.065,-L/2+.38,p.deck+.1,side*.48,o);bx(paint,.24,.045,W*.8,-L/2+.36,p.deck+.18,0,o)}
- for(const direction of[-1,1]){const plate=new THREE.Mesh(new THREE.PlaneGeometry(.52,.115),civicLabel(p.plate));plate.position.set(direction*(L/2+.018),direction>0?.48:.59,0);plate.rotation.y=direction*PI/2;o.add(plate)}
+ if(id==='fd')fdBodyDetails(o,t,p,paint);
+ for(const direction of[-1,1]){const plate=new THREE.Mesh(new THREE.PlaneGeometry(.52,.115),civicLabel(p.plate));plate.position.set(direction*(L/2+.018),direction>0?.48:id==='fd'?.77:.59,0);plate.rotation.y=direction*PI/2;o.add(plate)}
  civicWheels(o,t,wheels,p)}
-function civicLights(v){const t=v.t,p=civicProfiles[t.civic],W=t.W,ek=t.civic=='ek',fb=t.civic=='fb',points=(side,list)=>list.map(([z,y])=>[z*side,y]),face=(key,dir,list,material)=>{const depth=key.includes('badge')?.029:key.includes('indicator')?.026:key.includes('reflector')||key.includes('core')?.023:key.includes('chrome')||key.includes('clear')||key.includes('octagon')?.019:key.includes('lens')||key.startsWith('fog')?.014:.008;return civicFace(v,key,dir,list,material,depth)};
+// FD2 Type R exterior reconstructed from the user's front, rear and side photographs.
+const fdWheelPaint=new THREE.MeshStandardMaterial({color:lin('#e9e7db'),metalness:.35,roughness:.3}),fdBadge=lit('#bd1523');
+function fdLine(o,key,points,width,material){return civicMesh(o,'fd:detail:'+key,material,()=>new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),Math.max(16,points.length*8),width,5,false))}
+function fdDecal(o,text,width,height,x,y,z,direction=1){const mesh=new THREE.Mesh(new THREE.PlaneGeometry(width,height),civicLabel(text));mesh.position.set(x,y,z);mesh.rotation.y=direction*PI/2;mesh.castShadow=mesh.receiveShadow=false;o.add(mesh);return mesh}
+function fdCabinSide(o,t,p,paint,side){
+ const profile=new THREE.CatmullRomCurve3([[-1.35,1.016],[-1.05,1.205],[-.65,1.395],[-.2,1.419],[.37,1.395],[.85,1.20],[1.26,1.016]].map(([x,y])=>new THREE.Vector3(x,y,0))),samples=profile.getPoints(100),top=x=>{let i=1;while(i<samples.length-1&&samples[i].x<x)i++;const a=samples[i-1],b=samples[i];return a.y+(b.y-a.y)*Math.max(0,Math.min(1,(x-a.x)/(b.x-a.x)))},z=y=>side*(t.W*(.43-.063*Math.max(0,Math.min(1,(y-1.01)/(p.roof-1.01))))+.008);
+ civicMesh(o,'fd:cabin-side:'+side,paint,()=>civicGrid(64,6,(u,v)=>{const x=-1.35+u*2.61,y=1.015+(top(x)-1.015)*v;return[x,y,z(y)]},side<0));
+ for(const[i,range]of[[-1.24,-.275],[-.19,1.13]].entries())civicMesh(o,'fd:curved-window:'+side+':'+i,civicGlass,()=>civicGrid(32,5,(u,v)=>{const x=range[0]+u*(range[1]-range[0]),y=1.038+Math.max(0,top(x)-.045-1.038)*v;return[x,y,z(y)+side*.008]},side<0));
+ civicBar(o,[-.235,1.025,z(1.025)+side*.01],[-.235,1.397,z(1.397)+side*.01],.06,civicTrim);
+ for(const x of[-.77,.52])bx(paint,.15,.035,.036,x,.973,side*(t.W/2+.004),o);
+ const mirror=civicMesh(o,'fd:mirror:'+side,paint,()=>new THREE.SphereGeometry(1,16,10));mirror.scale.set(.115,.058,.085);mirror.position.set(1.02,1.07,side*(t.W/2+.06));bx(civicTrim,.07,.08,.04,1.065,1.015,side*(t.W/2+.01),o);bx(civicGlass,.012,.073,.12,.923,1.07,side*(t.W/2+.06),o)
+}
+function fdBodyDetails(o,t,p,paint){const L=t.L,W=t.W;
+ // Low white front lip, sculpted side skirts and the dark rear aero insert.
+ for(const side of[-1,1]){
+  civicMesh(o,'fd:skirt:'+side,paint,()=>civicGrid(40,4,(u,v)=>{const x=-1.02+u*2.05;return[x,.235+v*.13,side*(W/2-.025+Math.sin(v*PI)*.025)]},side<0));
+  fdLine(o,'sill:'+side,[[-1.04,.355,side*(W/2+.005)],[0,.36,side*(W/2+.005)],[1.02,.37,side*(W/2-.012)]],.009,paint);
+  // Door shut lines follow the rear arch instead of cutting vertically through it.
+  for(const[key,points]of[['front',[[1.14,1.01],[1.12,.75],[1.10,.42],[1.02,.365],[-.25,.365],[-.28,.61],[-.235,1.01]]],['rear',[[-.235,1.01],[-.28,.61],[-.25,.365],[-.91,.365],[-1.03,.42],[-1.04,.64],[-1.26,.91],[-1.28,1.01]]]])fdLine(o,key+side,points.map(([x,y])=>[x,y,side*(civicCross(t,p,x).w+.006)]),.004,civicTrim);
+  const fuel=[];for(let i=0;i<=32;i++){const a=i/32*2*PI;fuel.push([-1.52+Math.cos(a)*.075,.91+Math.sin(a)*.075,side*(civicCross(t,p,-1.52).w+.006)])}if(side===1)fdLine(o,'fuel',fuel,.003,civicTrim);
+  // Painted wing end plates and black uprights, matching the rear-view photo.
+  bx(civicTrim,.065,.30,.04,-1.99,1.225,side*.57,o);bx(paint,.27,.10,.025,-1.99,1.40,side*.71,o);
+ }
+ civicMesh(o,'fd:wing',paint,()=>civicGrid(12,20,(u,v)=>{const x=-2.14+u*.30,z=(v*2-1)*.72;return[x,1.395+.035*Math.sin(u*PI)+.015*(z/.72)**2,z]},true));
+ bx(paint,.28,.035,1.45,-2.0,1.39,0,o);
+ fdLine(o,'front-lip',[[2.13,.27,-.78],[2.26,.245,-.44],[2.29,.245,0],[2.26,.245,.44],[2.13,.27,.78]],.025,paint);
+ civicFace({o,t},'type-r:diffuser',-1,[[-.73,.34],[-.70,.56],[-.54,.59],[.54,.59],[.70,.56],[.73,.34],[.44,.34],[.31,.38],[-.31,.38],[-.44,.34]],civicTrim,.021);
+ for(const z of[-.52,-.26,0,.26,.52]){const fin=bx(civicTrim,.38,.09,.018,-L/2+.035,.315,z,o);fin.rotation.z=-.12}
+ // Hollow single exhaust, viewed from behind; no solid silver box at its mouth.
+ const pipe=civicMesh(o,'fd:exhaust',civicChrome,()=>new THREE.CylinderGeometry(.082,.082,.18,28,1,true).rotateZ(PI/2));pipe.position.set(-L/2-.055,.36,-.55);
+ const bore=new THREE.Mesh(new THREE.CircleGeometry(.069,24),civicTrim);bore.rotation.y=-PI/2;bore.position.set(-L/2-.148,.36,-.55);o.add(bore);
+ fdLine(o,'rear-brace',[[-L/2-.04,.29,-.47],[-L/2-.04,.29,.56]],.012,civicChrome);
+ // Hood shut lines and boot lid perimeter remain readable under reflections.
+ for(const side of[-1,1])fdLine(o,'hood'+side,[[1.22,1.03,side*.73],[1.63,.96,side*.63],[2.16,.86,side*.49]],.0035,civicTrim);
+ fdLine(o,'boot',[[-2.278,.95,-.47],[-2.285,.68,-.44],[-2.285,.63,0],[-2.285,.68,.44],[-2.278,.95,.47]],.004,civicTrim);
+ fdDecal(o,'CIVIC',.19,.043,-L/2-.033,.72,.39,-1);fdDecal(o,'TYPE R',.21,.043,-L/2-.033,.72,-.42,-1);
+}
+function fdLights(v){const t=v.t,W=t.W,points=(side,list)=>list.map(([z,y])=>[z*side,y]),face=(key,dir,list,material,depth=.014)=>civicFace(v,'type-r:'+key,dir,list,material,depth),circle=(z,y,r,n=24)=>Array.from({length:n},(_,i)=>[z+Math.cos(i/n*2*PI)*r,y+Math.sin(i/n*2*PI)*r]);
+ for(const side of[-1,1]){
+  const housing=[[.45,.697],[.40,.80],[.775,.907],[.798,.78],[.765,.71]];face('head-dark'+side,1,points(side,housing),civicTrim);
+  face('head-clear'+side,1,points(side,housing.map(([z,y])=>[.6+(z-.6)*.95,.8+(y-.8)*.91])),civicLens,.019);
+  for(const[z,y,r]of[[.526,.76,.046],[.692,.793,.069]]){face('reflector'+side+z,1,circle(side*z,y,r),civicChrome,.024);face('bulb'+side+z,1,circle(side*z,y,r*.58),headMat,.028);for(let i=0;i<5;i++){const zz=side*z+(i-2)*r*.27;face('lens-rib'+side+z+i,1,[[zz-.002,y-r*.65],[zz+.002,y-r*.65],[zz+.002,y+r*.65],[zz-.002,y+r*.65]],civicClear,.030)}}
+  const turn=face('indicator'+side,1,points(side,[[.746,.747],[.774,.754],[.778,.82],[.753,.825]]),ambMat,.032);turn.side_=side;turn.visible=false;v.il.push(turn);
+  face('side-intake'+side,1,points(side,[[.53,.40],[.49,.53],[.735,.55],[.69,.415]]),civicTrim);
+  face('tail-base'+side,-1,points(side,[[.30,.76],[.40,.965],[.733,.98],[.795,.90],[.797,.765]]),civicTrim);
+  face('tail-red'+side,-1,points(side,[[.315,.79],[.415,.95],[.731,.96],[.78,.89],[.78,.79]]),v.tm,.019);
+  face('tail-clear'+side,-1,points(side,[[.33,.765],[.345,.805],[.782,.805],[.788,.765]]),civicClear,.025);
+  for(const[z,r]of[[.46,.071],[.673,.085]]){face('tail-ring'+side+z,-1,circle(side*z,.881,r),civicChrome,.026);face('tail-round'+side+z,-1,circle(side*z,.881,r*.89),v.tm,.030)}
+  const rearTurn=face('rear-indicator'+side,-1,points(side,[[.69,.77],[.77,.77],[.77,.80],[.69,.80]]),ambMat,.032);rearTurn.side_=side;rearTurn.visible=false;v.il.push(rearTurn);
+ }
+ face('upper-grille',1,[[.45,.81],[.37,.704],[.11,.67],[-.11,.67],[-.37,.704],[-.45,.81]],civicTrim);
+ face('upper-trim',1,[[.365,.805],[.34,.779],[-.34,.779],[-.365,.805]],paintForFD());
+ face('lower-intake',1,[[.425,.35],[.39,.50],[.32,.53],[-.32,.53],[-.39,.50],[-.425,.35]],civicTrim);
+ // Thin mesh ribs provide depth without hundreds of separate meshes.
+ for(let i=-7;i<=7;i++){const z=i*.05;face('mesh'+i,1,[[z-.002,.365],[z+.002,.365],[z+.002,.497],[z-.002,.497]],civicLens,.019)}
+ for(const direction of[-1,1]){const y=direction>0?.755:.958;
+  face('badge-outline'+direction,direction,[[-.063,y-.056],[-.071,y+.053],[.071,y+.053],[.063,y-.056]],civicChrome,.034);
+  face('badge-red'+direction,direction,[[-.052,y-.047],[-.059,y+.044],[.059,y+.044],[.052,y-.047]],fdBadge,.037);
+  for(const [i,list]of[[[-.037,y-.037],[-.043,y+.036],[-.026,y+.036],[-.019,y-.037]],[[.019,y-.037],[.026,y+.036],[.043,y+.036],[.037,y-.037]],[[-.03,y-.004],[-.03,y+.009],[.03,y+.009],[.03,y-.004]]].entries())face('badge-H'+direction+i,direction,list,civicChrome,.041)
+ }
+ face('reverse',-1,[[-.375,.77],[-.375,.797],[-.335,.797],[-.335,.77]],v.rm,.033);
+ fdDecal(v.o,'TYPE R',.14,.036,t.L/2+.035,.757,-.24,1);
+}
+function paintForFD(){return carMat(TY['Honda Civic FD 2009'].paint)}
+function civicLights(v){if(v.t.civic==='fd'){fdLights(v);return}const t=v.t,p=civicProfiles[t.civic],W=t.W,ek=t.civic=='ek',fb=t.civic=='fb',points=(side,list)=>list.map(([z,y])=>[z*side,y]),face=(key,dir,list,material)=>{const depth=key.includes('badge')?.029:key.includes('indicator')?.026:key.includes('reflector')||key.includes('core')?.023:key.includes('chrome')||key.includes('clear')||key.includes('octagon')?.019:key.includes('lens')||key.startsWith('fog')?.014:.008;return civicFace(v,key,dir,list,material,depth)};
  // The front lamps are shaped housings with separate reflectors, not glowing bars.
  for(const side of[-1,1]){const outer=W*.455,inner=ek?.31:fb?.32:.30;
   const shape=ek?[[inner,.735],[inner+.025,.86],[outer-.07,.87],[outer,.815],[outer-.025,.72]]:fb?[[inner,.72],[inner+.045,.85],[outer-.045,.92],[outer,.82],[outer-.04,.705]]:[[inner,.705],[inner+.05,.82],[outer-.075,.88],[outer,.805],[outer-.025,.69]];
