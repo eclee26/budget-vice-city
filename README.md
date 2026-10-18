@@ -34,7 +34,12 @@ The driving HUD shows speed, gear, vehicle condition and RPM. Open **Help** (or 
   - Combined acceleration/braking/cornering tyre forces, front/rear weight distribution, and damped body movement.
   - A fixed 60 Hz simulation with three tyre integration substeps, independent of rendering FPS.
 - **Sedan handling:** passenger-car dimensions, a 2.7 m wheelbase, front-heavy weight distribution, responsive steering and throttle, six-speed automatic gearing, and visible wheel steering/rotation. Flat dry-road tests give approximately 8.6 s from 0–100 km/h and 38 m braking from 100 km/h.
-- **Vehicles:** Sports, Sedan, Van, Bike and the original Kaze R sport sedan.
+- **Vehicles:** Sports, Sedan, Van, Bike, the original Kaze R sport sedan, and three Civics:
+  - **Honda Civic FD 2009:** silver, swept cabin, low nose, split-spoke wheels, and an approximate 1.8 L / five-speed automatic setup.
+  - **Honda Civic FB 2013:** pearl white, shorter cabin, taller grille/deck, L-shaped rear lights, and an approximate 1.8 L / five-speed automatic setup.
+  - **Honda Civic SiR 1997:** blue, a more upright 1990s profile, amber lamp corners, five-spoke wheels, rear wing, and a lighter, high-revving B16A-style setup.
+  - All three have working lights, animated wheel steering/rotation, separate engine curves and chassis parameters. The SiR uses five-speed manual-style ratios with automatic shifting for the existing controls. These are procedural low-poly interpretations with approximate tunes.
+  - One of each Civic is parked along the coast just ahead of the starting Kaze R, roughly 12–36 m away. They can also appear in traffic and among parked cars.
 - **City life:** traffic that follows lanes and uses indicators, and pedestrians who flee and can be knocked over.
 - **World:** a city grid, a beach boardwalk, and an island with a lighthouse and bridge.
 - **Architecture:** houses with pitched roofs and porches, shops with awnings, neon bars, balcony apartments, glass offices, and three malls with larger footprints and storefront signs. These are exterior scenery; repeated parts share instanced geometry.

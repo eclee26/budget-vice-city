@@ -4,7 +4,7 @@
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);overflow:hidden;font:13px system-ui,sans-serif}canvas{display:block;touch-action:none}#world{position:fixed;inset:0;width:100%;height:100%}button{font:inherit;color:inherit;cursor:pointer}button:focus-visible{outline:3px solid var(--accent);outline-offset:4px}button:disabled{opacity:.4;cursor:default}[hidden]{display:none!important}
 #h{position:fixed;top:calc(12px + var(--safe-top));left:max(12px,env(safe-area-inset-left));width:224px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px;pointer-events:none}
 .hud-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.eyebrow{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700}.help-button{pointer-events:auto;border:1px solid var(--line);background:transparent;border-radius:8px;min-width:44px;min-height:44px;font-size:12px}.help-button:hover{background:#ffffff15}
-#vehicle-name{margin-top:6px;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.speed-row{display:flex;align-items:center;justify-content:space-between;margin:6px 0 12px}.speed-value{font-size:54px;font-weight:650;letter-spacing:-.06em;line-height:1;font-variant-numeric:tabular-nums}.unit{font-size:10px;color:var(--muted);margin-left:7px;letter-spacing:.08em}.gear{text-align:center;min-width:40px;border-left:1px solid var(--line);padding-left:12px}.gear small{display:block;color:var(--muted);font-size:9px;letter-spacing:.1em}.gear span{font-size:26px;color:var(--accent);font-variant-numeric:tabular-nums}.condition-label{display:flex;justify-content:space-between;gap:6px;font-size:10px;color:var(--muted);margin-bottom:6px}#condition-value{color:var(--fg);font-variant-numeric:tabular-nums}#condition-bar{display:block;width:100%;height:5px;appearance:none;border:0;border-radius:4px;overflow:hidden;background:#ffffff24;accent-color:var(--accent)}#condition-bar::-webkit-progress-bar{background:#ffffff24}#condition-bar::-webkit-progress-value{background:var(--condition-color,var(--accent))}#condition-bar::-moz-progress-bar{background:var(--condition-color,var(--accent))}#vehicle-hud[data-condition="warning"]{--condition-color:var(--warning)}#vehicle-hud[data-condition="critical"]{--condition-color:var(--danger)}#engine-status{color:var(--muted);font-size:10px;margin-top:8px;font-variant-numeric:tabular-nums}#foot-hint{margin:8px 0 0;color:var(--muted);font-size:11px;line-height:1.5}
+#vehicle-name{margin-top:6px;font-size:14px;font-weight:600;line-height:1.35;overflow-wrap:break-word}.speed-row{display:flex;align-items:center;justify-content:space-between;margin:6px 0 12px}.speed-value{font-size:54px;font-weight:650;letter-spacing:-.06em;line-height:1;font-variant-numeric:tabular-nums}.unit{font-size:10px;color:var(--muted);margin-left:7px;letter-spacing:.08em}.gear{text-align:center;min-width:40px;border-left:1px solid var(--line);padding-left:12px}.gear small{display:block;color:var(--muted);font-size:9px;letter-spacing:.1em}.gear span{font-size:26px;color:var(--accent);font-variant-numeric:tabular-nums}.condition-label{display:flex;justify-content:space-between;gap:6px;font-size:10px;color:var(--muted);margin-bottom:6px}#condition-value{color:var(--fg);font-variant-numeric:tabular-nums}#condition-bar{display:block;width:100%;height:5px;appearance:none;border:0;border-radius:4px;overflow:hidden;background:#ffffff24;accent-color:var(--accent)}#condition-bar::-webkit-progress-bar{background:#ffffff24}#condition-bar::-webkit-progress-value{background:var(--condition-color,var(--accent))}#condition-bar::-moz-progress-bar{background:var(--condition-color,var(--accent))}#vehicle-hud[data-condition="warning"]{--condition-color:var(--warning)}#vehicle-hud[data-condition="critical"]{--condition-color:var(--danger)}#engine-status{color:var(--muted);font-size:10px;margin-top:8px;font-variant-numeric:tabular-nums}#foot-hint{margin:8px 0 0;color:var(--muted);font-size:11px;line-height:1.5}
 #mm{position:fixed;top:calc(12px + var(--safe-top));right:max(12px,env(safe-area-inset-right));width:150px;height:150px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
 #t{display:none;position:fixed;inset:0;pointer-events:none;user-select:none;-webkit-user-select:none}.touch-enabled #t{display:block}#t button{pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}
 #stick{position:absolute;left:max(20px,env(safe-area-inset-left));bottom:calc(28px + var(--safe-bottom));width:128px;height:128px;border:1px solid #ffffff55;border-radius:50%;background:rgba(12,20,30,.55);display:grid;place-items:center;padding:0}#stick::before{content:'';position:absolute;inset:17px;border:1px dashed #ffffff35;border-radius:50%}#stick-knob{width:48px;height:48px;border:2px solid var(--accent);border-radius:50%;background:#213940;pointer-events:none;box-shadow:0 3px 12px #0004}#stick-label{position:absolute;bottom:-20px;font-size:9px;letter-spacing:.1em;color:var(--fg);text-shadow:0 1px 4px #000}
@@ -226,7 +226,12 @@ Sports:{L:4.4,W:2,H:.8,st:.5,m:1300,Tp:330,red:7500,gr:[3.2,2.2,1.6,1.25,1,.82],
 Sedan:{L:4.55,W:1.82,H:.6,wb:2.7,front:.59,cg:.52,iz:2350,cf:90000,cr:82000,st:.59,steerRate:2.3,m:1430,Tp:210,red:6500,gr:[3.62,2.05,1.37,1.03,.82,.68],fd:3.94,cda:.64,dr:'F',r:.32},
 Van:{L:5.2,W:2.3,H:2.2,st:.5,m:2200,Tp:300,red:4800,gr:[3.9,2.3,1.5,1,.8],fd:4.1,cda:1.4,dr:'R'},
 Bike:{L:2.2,W:.7,H:.6,st:.7,m:240,Tp:95,red:11500,gr:[2.8,2,1.6,1.35,1.18,1.05],fd:6.2,cda:.4,dr:'R',r:.3},
+'Honda Civic FD 2009':{civic:'fd',eff:.82,paint:'#aeb9c6',L:4.54,W:1.755,H:.6,wb:2.7,front:.6,cg:.49,iz:2100,cf:81000,cr:75000,st:.59,steerRate:2.4,m:1240,Tp:174,red:6800,gr:[2.666,1.534,1.022,.721,.525],fd:4.437,cda:.58,dr:'F',r:.31,curve:[[900,100],[2000,145],[3500,168],[4300,174],[5600,174],[6500,145],[6800,132]]},
+'Honda Civic FB 2013':{civic:'fb',eff:.82,paint:'#e9e8df',L:4.525,W:1.755,H:.6,wb:2.67,front:.6,cg:.5,iz:2140,cf:82000,cr:76000,st:.59,steerRate:2.3,m:1270,Tp:174,red:6800,gr:[2.666,1.534,1.022,.721,.525],fd:4.437,cda:.57,dr:'F',r:.31,curve:[[900,105],[2000,150],[3500,169],[4300,174],[5600,174],[6500,145],[6800,132]]},
+'Honda Civic SiR 1997':{civic:'ek',eff:.88,paint:'#2452a2',L:4.45,W:1.695,H:.56,wb:2.62,front:.61,cg:.46,iz:1740,cf:79000,cr:74000,st:.6,steerRate:2.7,m:1130,Tp:157,red:8200,gr:[3.23,1.9,1.36,1.034,.787],fd:4.4,cda:.61,dr:'F',r:.296,curve:[[900,78],[2500,108],[4500,130],[5500,143],[7000,157],[7800,151],[8200,139]]},
 'Kaze R':{L:4.5,W:2,H:.85,st:.62,m:1270,Tp:215,red:8400,gr:[3.27,2.13,1.52,1.15,.92,.74],fd:4.76,cda:.66,dr:'F'}};
+// Approximate engine curves differentiate the 1.8 L commuters and high-revving SiR.
+function torqueAt(t,rpm){if(!t.curve){const x=rpm/t.red;return t.Tp*(.55+.95*x-.55*x*x)}const points=t.curve;if(rpm<=points[0][0])return points[0][1];for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i];if(rpm<=b[0])return a[1]+(b[1]-a[1])*(rpm-a[0])/(b[0]-a[0])}return points[points.length-1][1]}
 const lit=c=>new THREE.MeshBasicMaterial({color:lin(c).multiplyScalar(4),toneMapped:false}),HC=lin('#fff6e0'),headMat=new THREE.MeshBasicMaterial({color:HC.clone(),toneMapped:false}),ambMat=new THREE.MeshBasicMaterial({color:lin('#ffa000').multiplyScalar(6),toneMapped:false});
 function kaze(o,t){const c=carMat('#1f6f8b'),L=t.L,W=t.W;
  bx(c,L,.55,W,0,.7,0,o);bx(c,L*.9,.25,W-.05,-.05,1.1,0,o);bx(dark,L*.4,.55,W-.25,-.3,1.5,0,o);bx(c,L*.34,.1,W-.3,-.35,1.8,0,o);
@@ -235,22 +240,62 @@ function kaze(o,t){const c=carMat('#1f6f8b'),L=t.L,W=t.W;
  for(const z of[-.62,.62])bx(c,.22,.14,.22,.55,1.3,z*1.75,o);
  for(const x of[-L*.31,L*.31])for(const z of[-W/2,W/2]){bx(RUB,.9,.9,.28,x,.45,z,o);bx(new THREE.MeshStandardMaterial({color:lin('#c9a227'),metalness:.9,roughness:.25}),.55,.55,.3,x,.45,z,o)}}
 const cars=[],dark=GLASS;
+// Profiles are authored per generation; x points toward the front of the car.
+const civicProfiles={
+ fd:{roof:1.435,rear:-1.31,roofRear:-.66,roofFront:.36,front:1.26,nose:.68,deck:.91,plate:'FD 2009',spokes:10},
+ fb:{roof:1.435,rear:-1.19,roofRear:-.65,roofFront:.35,front:1.16,nose:.75,deck:.97,plate:'FB 2013',spokes:5},
+ ek:{roof:1.365,rear:-1.13,roofRear:-.64,roofFront:.38,front:1.07,nose:.72,deck:.91,plate:'SiR 1997',spokes:5}
+};
+const civicWheelGeometry=new Map(),civicLabelMaterials=new Map();
+function civicLabel(text){if(civicLabelMaterials.has(text))return civicLabelMaterials.get(text);const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;const c=canvas.getContext('2d');c.fillStyle='#ece9dc';c.fillRect(0,0,512,128);c.fillStyle='#14202b';c.font='bold 80px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(text,256,69,480);const texture=new THREE.CanvasTexture(canvas);texture.encoding=THREE.sRGBEncoding;const material=new THREE.MeshStandardMaterial({map:texture,roughness:.65});civicLabelMaterials.set(text,material);return material}
+function civicLoft(sections,material,o){const positions=[],tri=(a,b,c)=>positions.push(...a,...c,...b),rings=sections.map(([x,y,w,bottom,base=w])=>[[x,bottom,-base],[x,y,-w],[x,y,w],[x,bottom,base]]);
+ for(let i=1;i<rings.length;i++)for(let j=0;j<4;j++){const k=(j+1)%4,a=rings[i-1][j],b=rings[i][j],c=rings[i][k],d=rings[i-1][k];tri(a,b,c);tri(a,c,d)}const a=rings[0],b=rings[rings.length-1];tri(a[0],a[1],a[2]);tri(a[0],a[2],a[3]);tri(b[0],b[2],b[1]);tri(b[0],b[3],b[2]);
+ const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.computeVertexNormals();const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=mesh.receiveShadow=true;o.add(mesh);return mesh}
+function civicWheels(o,t,wheels,p){const key=t.civic;let geometry=civicWheelGeometry.get(key);if(!geometry){geometry={tyre:new THREE.CylinderGeometry(t.r,t.r,.21,20).rotateX(PI/2),rim:new THREE.CylinderGeometry(t.r*.61,t.r*.61,.215,20).rotateX(PI/2)};civicWheelGeometry.set(key,geometry)}
+ for(const x of[-t.wb/2,t.wb/2])for(const side of[-1,1]){const steer=new THREE.Group(),spin=new THREE.Group();steer.position.set(x,t.r,side*(t.W/2-.06));steer.add(spin);o.add(steer);const tyre=new THREE.Mesh(geometry.tyre,RUB),rim=new THREE.Mesh(geometry.rim,mat('#252d34'));tyre.castShadow=true;spin.add(tyre,rim);
+  for(let i=0;i<p.spokes;i++){const angle=i/p.spokes*2*PI,b=bx('#b9c2c8',t.civic=='ek'?.045:.035,t.r*.55,.025,Math.cos(angle)*t.r*.3,Math.sin(angle)*t.r*.3,side*.12,spin);b.rotation.z=angle-PI/2}bx('#d1d5d6',.09,.09,.25,0,0,0,spin);wheels.push({steer,spin,front:x>0})}}
+function civicBody(o,t,wheels){const p=civicProfiles[t.civic],paint=carMat(t.paint),W=t.W,L=t.L,ek=t.civic=='ek',fb=t.civic=='fb';
+ civicLoft([[-L/2,p.deck-.13,W*.45,.39],[-L/2+.22,p.deck,W*.49,.29],[p.rear,.96,W*.5,.28],[p.front,.91,W*.5,.28],[L/2-.25,p.nose+.08,W*.48,.33],[L/2,p.nose,W*.44,.4]],paint,o);
+ civicLoft([[p.rear,.97,W*.43,.93],[p.roofRear,p.roof,W*.37,.93,W*.43],[p.roofFront,p.roof,W*.37,.91,W*.43],[p.front,.94,W*.43,.9]],GLASS,o);
+ bx(paint,p.roofFront-p.roofRear+.08,.055,W*.76,(p.roofFront+p.roofRear)/2,p.roof+.015,0,o);
+ // Thin A/C pillars and a solid B pillar keep the windows from reading as a single box.
+ for(const side of[-1,1]){const z=side*W*.435;for(const[a,b]of[[[p.rear,.97],[p.roofRear,p.roof]],[[p.roofFront,p.roof],[p.front,.94]]]){const dx=b[0]-a[0],dy=b[1]-a[1],bar=bx(paint,Math.hypot(dx,dy),.055,.07,(a[0]+b[0])/2,(a[1]+b[1])/2,z*.91,o);bar.rotation.z=Math.atan2(dy,dx)}
+  bx('#1c242a',.075,p.roof-.96,.045,-.25,(p.roof+.96)/2,z*.94,o);
+  bx(paint,L*.67,.08,.06,-.02,.4,side*(W/2+.008),o);bx('#313b43',L*.7,.025,.025,-.04,.79,side*(W/2+.014),o);
+  for(const x of[-.77,.54]){bx('#aeb8bc',.16,.035,.035,x,.91,side*(W/2+.018),o);bx('#34404a',.018,.4,.012,x-.35,.63,side*(W/2+.014),o)}
+  bx(paint,.25,.12,.16,p.front-.28,1.02,side*(W/2+.04),o)}
+ const grilleWidth=ek?W*.43:fb?W*.53:W*.46;bx('#17212b',.035,ek?.14:.13,grilleWidth,L/2+.012,p.nose-.06,0,o);bx('#abb5bc',.045,.025,grilleWidth,L/2+.03,p.nose+.018,0,o);
+ bx('#18222a',.04,.13,W*.65,L/2+.01,.45,0,o);bx('#c1c8cb',.052,.12,.08,L/2+.04,p.nose-.035,0,o);
+ if(ek){for(const side of[-1,1]){bx(paint,.09,.14,.07,-L/2+.36,1.01,side*.49,o)}bx(paint,.3,.065,W*.82,-L/2+.35,1.115,0,o)}
+ else if(!fb)bx(paint,.1,.045,W*.83,-L/2+.08,p.deck-.02,0,o);
+ for(const direction of[-1,1]){const plate=new THREE.Mesh(new THREE.PlaneGeometry(.55,.135),civicLabel(p.plate));plate.position.set(direction*(L/2+.047),direction>0?.43:.54,0);plate.rotation.y=direction*PI/2;o.add(plate)}
+ civicWheels(o,t,wheels,p)}
+function civicLights(v){const t=v.t,p=civicProfiles[t.civic],L=t.L,W=t.W,fb=t.civic=='fb',ek=t.civic=='ek';
+ for(const side of[-1,1]){const z=side*W*.335,width=ek?.42:fb?.48:.53,y=p.nose-.055;
+  const lamp=bx(headMat,.055,ek?.155:fb?.17:.115,width,L/2+.018,y,z,v.o);lamp.rotation.x=side*(ek?0:fb?.07:-.18);lamp.castShadow=false;
+  if(ek)bx(ambMat,.06,.13,.09,L/2+.022,y,side*W*.43,v.o).castShadow=false;
+  bx(v.tm,.055,fb?.13:ek?.18:.15,fb?.48:.43,-L/2-.02,p.deck-.17,z,v.o).castShadow=false;
+  if(fb)bx(v.tm,.06,.25,.095,-L/2-.024,p.deck-.12,side*W*.43,v.o).castShadow=false;
+  if(!fb&&!ek)bx(v.tm,.055,.1,.21,-L/2-.024,p.deck-.27,side*W*.32,v.o).castShadow=false;
+ }bx(v.rm,.06,.075,.2,-L/2-.026,p.deck-.2,0,v.o).castShadow=false}
 function mkCar(n){const t=TY[n],o=new THREE.Group(),wheels=[],col=['#e33','#fd0','#0cf','#fff','#f6c','#3e6'][R()*6|0];o.rotation.order='YXZ';
- if(n=='Kaze R')kaze(o,t);else{bx(carMat(col),t.L,t.H,t.W,0,.4+t.H/2,0,o);
+ if(t.civic)civicBody(o,t,wheels);else if(n=='Kaze R')kaze(o,t);else{bx(carMat(col),t.L,t.H,t.W,0,.4+t.H/2,0,o);
  if(n=='Bike'){bx(dark,.9,.3,.5,-.2,.4+t.H+.15,0,o);for(const x of[-.8,.8])bx(RUB,.7,.7,.2,x,.35,0,o)}
  else{n=='Van'?bx(dark,.3,.7,t.W-.2,t.L/2-.1,.4+t.H*.72,0,o):bx(dark,t.L*.48,n=='Sedan'?.64:.8,t.W-.2,-.3,.4+t.H+(n=='Sedan'?.32:.4),0,o);
   for(const x of[-(t.wb||t.L*.64)/2,(t.wb||t.L*.64)/2])for(const z of[-t.W/2+.08,t.W/2-.08]){if(n=='Sedan'){const steer=new THREE.Group(),spin=new THREE.Group();steer.position.set(x,t.r,z);steer.add(spin);o.add(steer);const tyre=new THREE.Mesh(new THREE.CylinderGeometry(t.r,t.r,.23,18).rotateX(PI/2),RUB),hub=new THREE.Mesh(new THREE.CylinderGeometry(.19,.19,.24,12).rotateX(PI/2),mat('#b5bdc3'));tyre.castShadow=hub.castShadow=true;spin.add(tyre,hub);bx('#49505a',.035,.3,.25,0,0,0,spin);wheels.push({steer,spin,front:x>0})}else bx(RUB,.8,.8,.3,x,.4,z,o)}}
  }S.add(o);const v={x:0,z:0,a:0,vx:0,vz:0,st:0,roll:0,pitch:0,t,n,o,wheels,ai:null,dmg:0,ind:0,il:[],tm:new THREE.MeshBasicMaterial({color:0x330000,toneMapped:false}),rm:new THREE.MeshBasicMaterial({color:0x111111,toneMapped:false})};
  const y=t.H*.5+.45,zs=n=='Bike'?[0]:[-t.W/2+.35,t.W/2-.35],lb=(m_,sx,sy,sz,x,yy,z)=>{const b=bx(m_,sx,sy,sz,x,yy,z,o);b.castShadow=false;return b};
- for(const z of zs){lb(headMat,.06,.16,.4,t.L/2+.02,y,z);lb(v.tm,.06,.15,.4,-t.L/2-.02,y+.08,z)}lb(v.rm,.06,.1,.3,-t.L/2-.02,y-.07,0);
+ if(t.civic)civicLights(v);else{for(const z of zs){lb(headMat,.06,.16,.4,t.L/2+.02,y,z);lb(v.tm,.06,.15,.4,-t.L/2-.02,y+.08,z)}lb(v.rm,.06,.1,.3,-t.L/2-.02,y-.07,0)}
  for(const s of[-1,1])for(const x of[t.L/2+.01,-t.L/2-.01]){const b=lb(ambMat,.07,.09,.14,x,y+(x>0?.14:-.1),s*(t.W/2-.08));b.side_=s;b.visible=false;v.il.push(b)}
  cars.push(v);return v}
-const types=Object.keys(TY),rt=()=>types[R()*4|0];
+const types=Object.keys(TY),civicNames=types.filter(n=>TY[n].civic),parkedTypes=types.filter(n=>n!='Kaze R'),trafficTypes=types.filter(n=>n!='Bike'&&n!='Kaze R'),rt=()=>parkedTypes[R()*parkedTypes.length|0];
 function lanePoint(e,i,dir=1,offset=null){const p=e.points[i],a=e.points[Math.max(0,i-1)],b=e.points[Math.min(e.points.length-1,i+1)],d=Math.hypot(b.x-a.x,b.z-a.z)||1,l=offset==null?(e.width==ROAD.boulevard?e.width*.34:e.width*.25):offset;
  return{x:p.x-(b.z-a.z)/d*l*dir,z:p.z+(b.x-a.x)/d*l*dir,a:Math.atan2((b.z-a.z)*dir,(b.x-a.x)*dir)}}
 const start=lanePoint(coastStart,44,1,8.5);
-for(let c=0;c<10;c++){const e=roads[1+(R()*(roads.length-2)|0)],i=8+(R()*(e.points.length-16)|0),p=lanePoint(e,i,1,e.width/2-1.8),v=mkCar(rt());v.x=p.x;v.z=p.z;v.a=p.a}
 {const v=mkCar('Kaze R');v.x=start.x;v.z=start.z;v.a=start.a}
+// A fixed lineup beside the starting coast makes every requested Civic available.
+for(let i=0;i<civicNames.length;i++){const p=lanePoint(coastStart,62+i*18,1,8.5),v=mkCar(civicNames[i]);v.x=p.x;v.z=p.z;v.a=p.a}
+for(let c=0;c<10;c++)for(let attempt=0;attempt<30;attempt++){const e=roads[1+(R()*(roads.length-2)|0)],i=8+(R()*(e.points.length-16)|0),p=lanePoint(e,i,1,e.width/2-1.8);if(cars.some(v=>Math.hypot(v.x-p.x,v.z-p.z)<7))continue;const v=mkCar(rt());v.x=p.x;v.z=p.z;v.a=p.a;break}
 // Follow the same sampled curves as the visible roads, in right-hand lanes.
 function driveLane(e,dir){const path=e.points.map((_,i)=>lanePoint(e,i,dir));if(dir<0)path.reverse();
  const from=dir>0?e.a:e.b,to=dir>0?e.b:e.a,trim=n=>n.links.length==1?7:12;
@@ -260,9 +305,9 @@ function nextRoad(v){const A=v.ai,n=A.dir>0?A.e.b:A.e.a,choices=n.links.filter(e
  // Cubic lane connectors round each turn instead of aiming at a square node.
  for(let i=1;i<=18;i++){const t=i/18,u=1-t;join.push({x:u*u*u*a.x+3*u*u*t*(a.x+Math.cos(a.a)*reach)+3*u*t*t*(b.x-Math.cos(b.a)*reach)+t*t*t*b.x,z:u*u*u*a.z+3*u*u*t*(a.z+Math.sin(a.a)*reach)+3*u*t*t*(b.z-Math.sin(b.a)*reach)+t*t*t*b.z})}
  v.ind=Math.sign(Math.sin(b.a-v.a));A.e=e;A.dir=dir;A.path=join.concat(path);A.i=0}
-function spawnAI(v){const e=roads[R()*roads.length|0],dir=R()<.5?1:-1,path=driveLane(e,dir),i=R()*path.length|0,p=path[i];
+function spawnAI(v){let e,dir,path,i,p;for(let attempt=0;attempt<24;attempt++){e=roads[R()*roads.length|0];dir=R()<.5?1:-1;path=driveLane(e,dir);i=R()*path.length|0;p=path[i];if(!cars.some(o=>o!=v&&Math.hypot(o.x-p.x,o.z-p.z)<8))break}
  v.ai={e,dir,path,i,stk:0};v.x=p.x;v.z=p.z;v.a=p.a;v.vx=v.vz=0;v.yr=0;v.g=1}
-for(let c=0;c<14;c++)spawnAI(mkCar(types[R()*3|0]));
+for(let c=0;c<14;c++)spawnAI(mkCar(trafficTypes[R()*trafficTypes.length|0]));
 function aiDrive(v){const A=v.ai,sp=Math.hypot(v.vx,v.vz),look=4+sp*.35;let target;
  // Consume nearby waypoints across a smoothed junction connector.
  for(let n=0;n<32;n++){target=A.path[A.i];if(Math.hypot(target.x-v.x,target.z-v.z)>look)break;
@@ -366,7 +411,7 @@ const ui=Object.fromEntries(['travel-mode','foot-hint','vehicle-hud','vehicle-na
 let hudDriving=null;
 function updateHud(){const driving=!!car;if(hudDriving!==driving){hudDriving=driving;document.body.classList.toggle('driving',driving);ui['vehicle-hud'].hidden=!driving;ui['foot-hint'].hidden=driving;ui['travel-mode'].textContent=driving?'Behind the wheel':'On foot';ui['stick-label'].textContent=driving?'STEER':'MOVE';ui['jump-control'].textContent=driving?'Handbrake':'Jump';ui['jump-control'].setAttribute('aria-label',driving?'Handbrake':'Jump');ui['enter-control'].textContent=driving?'Exit':'Drive';ui['enter-control'].setAttribute('aria-label',driving?'Exit vehicle when stopped':'Enter nearby car');ui['camera-control'].disabled=!driving}
  ui['enter-control'].disabled=driving?Math.hypot(car.vx,car.vz)>=1:!cars.some(v=>Math.hypot(v.x-P.x,v.z-P.z)<6);
- if(!driving)return;const condition=Math.max(0,100-Math.round(car.dmg/1.5));ui['vehicle-name'].textContent=car.n;ui['speed-value'].textContent=Math.floor(Math.hypot(car.vx,car.vz)*2.237);ui['gear-value'].textContent=car.g<0?'R':car.g||1;
+ if(!driving)return;const condition=Math.max(0,100-Math.round(car.dmg/1.5));ui['vehicle-name'].textContent=car.n;ui['vehicle-name'].title=car.n;ui['speed-value'].textContent=Math.floor(Math.hypot(car.vx,car.vz)*2.237);ui['gear-value'].textContent=car.g<0?'R':car.g||1;
  ui['vehicle-hud'].dataset.condition=condition<=20?'critical':condition<=40?'warning':'good';ui['condition-value'].textContent=condition+'%';ui['condition-bar'].value=condition;ui['condition-bar'].textContent=condition+'%';ui['condition-label'].textContent=car.dmg>150?'Engine disabled':'Vehicle condition';ui['engine-status'].textContent=Math.round(car.rpm||900).toLocaleString('en-US')+' RPM'}
 // physics
 let shake=0,ca=0,obs=[];
@@ -382,8 +427,8 @@ function phys(v,ti,bi,si,hb){const t=v.t,tl=tile(v.x,v.z),off=tl==0||tl==3,mu=tl
  if(v.sh>0)v.sh--;else if(v.g>0){if(rpmW>t.red*.95&&v.g<t.gr.length){v.g++;v.sh=12}else if(v.g>1&&rpmW<t.red*(v.thr>.6?.47:.3)){v.g--;v.sh=9}}
  ratio=(v.g<0?3.3:t.gr[v.g-1])*t.fd;rpmW=speed/(2*PI*R0)*60*ratio;
  const launch=900+v.thr*2300,engineRpm=Math.max(900,rpmW,(v.g==1||v.g<0)?launch:0);v.rpm+=(Math.min(engineRpm,t.red)-v.rpm)*(1-Math.exp(-DT/.07));
- const rev=v.rpm/t.red,torque=rpmW>t.red*1.03?0:t.Tp*(.55+.95*rev-.55*rev*rev)*v.thr*(v.dmg>150?0:v.dmg>90?.6:1);
- const drive=v.sh>0?0:torque*ratio*.9/R0*(v.g<0?-1:1);
+ const torque=rpmW>t.red*1.03?0:torqueAt(t,v.rpm)*v.thr*(v.dmg>150?0:v.dmg>90?.6:1);
+ const drive=v.sh>0?0:torque*ratio*(t.eff||.9)/R0*(v.g<0?-1:1);
  // Speed-sensitive input limits represent how a driver meters steering at speed.
  // The resulting yaw still comes from tyre forces, rather than rotating the car directly.
  const lock=Math.min(t.st,Math.atan2(L*mu*G9*.94,Math.max(speed*speed,1))),target=si*lock,steerRate=Math.abs(si)<.01?3.2:t.steerRate||2.3;

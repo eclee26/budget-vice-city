@@ -33,6 +33,14 @@ test('reverse selects at rest, accelerates backward and reverses steering direct
  assert.equal(v.g,-1);assert.ok(v.vx<-.5);const angle=v.a;
  for(let i=0;i<30;i++)c.tick(v,0,1,.5,false);assert.ok(v.a<angle);
 });
+test('Civics have usable engine curves and the SiR trades low-RPM torque for high-RPM power',()=>{
+ const c=model(),fd=c.types['Honda Civic FD 2009'],fb=c.types['Honda Civic FB 2013'],sir=c.types['Honda Civic SiR 1997'];
+ assert.ok(fd&&fb&&sir);assert.ok(c.torqueAt(fd,2000)>c.torqueAt(sir,2000));assert.ok(c.torqueAt(fb,2000)>c.torqueAt(sir,2000));
+ const power=t=>Math.max(...Array.from({length:100},(_,i)=>{const rpm=900+(t.red-900)*i/99,torque=c.torqueAt(t,rpm);assert.ok(Number.isFinite(torque)&&torque>0);return torque*rpm/9549}));
+ assert.ok(power(sir)>power(fd));assert.ok(sir.red>fd.red&&sir.m<fd.m);
+ const times=[];for(const name of['Honda Civic FD 2009','Honda Civic FB 2013','Honda Civic SiR 1997']){const v=vehicle(c,0,name);let ticks=0;while(speed(v)<100/3.6&&ticks<1200){c.tick(v,1,0,0,false);ticks++}assert.ok(ticks/60>6&&ticks/60<13,`${name}: acceleration out of range`);times.push(ticks)}
+ assert.ok(times[2]<times[0]&&times[2]<times[1]);
+});
 test('parked vehicles stay still and lower-grip ground increases stopping distance',()=>{
  const c=model(),v=vehicle(c);for(let i=0;i<600;i++)c.tick(v,0,0,0,true);
  assert.equal(v.x,0);assert.equal(v.z,0);assert.equal(speed(v),0);
