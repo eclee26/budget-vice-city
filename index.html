@@ -419,7 +419,7 @@ function phys(v,ti,bi,si,hb){const t=v.t,tl=tile(v.x,v.z),off=tl==0||tl==3,mu=tl
  const hit=(X,Z)=>{for(const s of[-t.L/2,t.L/2])for(const q of[-t.W/2,t.W/2])if(solid(X+fx*s+rx*q,Z+fz*s+rz*q))return 1},nx=v.x+v.vx*DT,nz=v.z+v.vz*DT;
  if(!hit(nx,nz)||hit(v.x,v.z)){v.x=nx;v.z=nz}
  else{const im=Math.hypot(v.vx,v.vz);if(!hit(nx,v.z)){v.x=nx;v.vz*=-.3}else if(!hit(v.x,nz)){v.z=nz;v.vx*=-.3}else{v.vx*=-.3;v.vz*=-.3}
-  v.vx*=.5;v.vz*=.5;v.yr*=.5;if(im>3){hurt(v,im);sparks(v.x+fx*t.L/2*Math.sign(u||1),.6,v.z+fz*t.L/2*Math.sign(u||1),im)}if(v==car&&im>4)shake=Math.min(1.5,im/15)}}
+  v.vx*=.5;v.vz*=.5;v.yr*=.5;if(im>3){hurt(v,im);sparks(v.x+fx*t.L/2*Math.sign(initialU||1),.6,v.z+fz*t.L/2*Math.sign(initialU||1),im)}if(v==car&&im>4)shake=Math.min(1.5,im/15)}}
 function step(){dayNight();const tr=clamp((pressed('d')?1:0)-(pressed('a')?1:0)+touch.x,-1,1);obs=car?cars.concat(peds):cars.concat(peds,[P]);
  for(const v of cars)v==car?phys(v,pressed('w')?1:0,pressed('s')?1:0,tr,pressed(' ')):v.ai?aiDrive(v):phys(v,0,0,0,1);
  for(let i=0;i<cars.length;i++)for(let j=i+1;j<cars.length;j++){const A=cars[i],B=cars[j],dx=B.x-A.x,dz=B.z-A.z,d=Math.hypot(dx,dz),rr=(A.t.L+B.t.L)*.42;

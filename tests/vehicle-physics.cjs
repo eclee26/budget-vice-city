@@ -47,6 +47,20 @@ test('all vehicle types remain finite through acceleration, turns and handbrakin
   }
  }
 });
+test('forward, reverse and glancing wall impacts emit effects without stopping physics',()=>{
+ for(const name of Object.keys(model().types))for(const direction of[-1,1])for(const sideSpeed of[0,7]){
+  const c=model(),v=vehicle(c,direction*20,name),wall=v.t.L/2+.1,effects=[];
+  v.vz=sideSpeed;c.car=v;c.solid=(x)=>direction*x>=wall;
+  c.hurt=(car,impact)=>{car.dmg+=impact*2.2};c.sparks=(...args)=>effects.push(args);
+  c.tick(v,0,0,0,false);
+  assert.ok(v.dmg>0,`${name}: collision must apply damage`);
+  assert.equal(effects.length,1,`${name}: collision must emit sparks`);
+  assert.equal(Math.sign(effects[0][0]-v.x),direction,`${name}: sparks must appear at the struck end`);
+  assert.ok(effects[0].every(Number.isFinite));assert.ok(c.shake>0);
+  for(let i=0;i<120;i++)c.tick(v,0,0,0,false);
+  for(const field of['x','z','a','vx','vz','yr'])assert.ok(Number.isFinite(v[field]),`${name}: ${field} after collision`);
+ }
+});
 const clockSource=html.slice(html.indexOf('let simLast='),html.indexOf('(function loop(now='));
 function clock(){const c=model(),v=vehicle(c);let ticks=0;
  Object.assign(c,{performance:{now:()=>0},help:{open:false},document:{hidden:false},step:()=>{c.tick(v,1,0,0,false);ticks++},updParts:()=>{},ambient:()=>{},mini:()=>{}});
