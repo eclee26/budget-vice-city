@@ -49,7 +49,9 @@ The driving HUD shows speed, gear, vehicle condition and RPM. Open **Help** (or 
   - Windows and street lamps light up at night.
 - **Audio:** synthesized RPM/load-driven engines, nearby traffic, road noise, tyre slip and collision impacts. Sound starts after your first click, tap or keypress. Use the Sound button or **M** to mute; the preference is saved when browser storage is available. Help, background tabs and focus loss silence audio. These are generated effects, not recordings of the real cars.
 - **Effects:**
-  - Bloom, colour grading and motion blur.
+  - FXAA edge smoothing, restrained bloom, colour grading and speed-dependent motion blur.
+  - Closer sun-shadow coverage with stable positioning, plus soft contact shadows beneath cars and people.
+  - Shared asphalt/concrete surface grain, sidewalk slab joints, clearer paint/glass/metal materials and cached day/dusk/night reflections. Touch devices use smaller shadow maps and a capped render resolution.
   - Tyre smoke, skid marks and dust.
   - Sparks and car damage.
   - Working car lights.
