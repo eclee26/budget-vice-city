@@ -20,10 +20,10 @@ body{margin:0;background:var(--bg);color:var(--fg);overflow:hidden;font:13px san
 <script>
 const T=10,N=48,R=Math.random,PI=Math.PI,m=[],hud=document.getElementById('h');let comp=null,fin=null,night=0;
 // A sparse road graph: long avenues, a winding coast, and rounded outer corners.
-// One sampled centerline owns the surface, collision mask, minimap and AI lanes.
+// One sampled centerline owns the road geometry, collision mask, minimap and AI lanes.
 const ROAD={street:18,boulevard:22,bridge:14,sidewalk:2.2,asphalt:'#30343b',curb:'#b9b4aa',edge:'#eee9da',center:'#e8c35b'},nodes=[],roads=[];
 function junction(x,z){const n={x,z,links:[]};nodes.push(n);return n}
-function road(a,b,width=ROAD.street,controls=null){const points=[],steps=Math.ceil((Math.hypot(b.x-a.x,b.z-a.z)+(controls?100:0))/2);
+function road(a,b,width=ROAD.street,controls=null){const points=[],steps=Math.ceil((Math.hypot(b.x-a.x,b.z-a.z)+(controls?100:0)));
  for(let i=0;i<=steps;i++){const t=i/steps,u=1-t;points.push(controls?{x:u*u*u*a.x+3*u*u*t*controls[0]+3*u*t*t*controls[2]+t*t*t*b.x,z:u*u*u*a.z+3*u*u*t*controls[1]+3*u*t*t*controls[3]+t*t*t*b.z}:{x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t})}
  const e={a,b,width,points};roads.push(e);a.links.push(e);b.links.push(e);return e}
 const north=[junction(150,35),junction(230,35),junction(340,35),junction(395,35)],
@@ -76,6 +76,8 @@ const base=['#4f7f3a',ROAD.asphalt,'#6e6a64','#e3cf9a','#1b6f8f','#9c6b3e','#4f7
 for(let j=0;j<N;j++)for(let i=0;i<N;i++){const t=m[j][i],X=i*Q,Y=j*Q;g.fillStyle=base[t];g.fillRect(X,Y,Q,Q);
  for(let n=0;n<40;n++){g.fillStyle=`rgba(${R()<.5?'0,0,0':'255,255,255'},${R()*.08})`;g.fillRect(X+R()*Q,Y+R()*Q,1+R()*3,1+R()*3)}
  if(t==5){g.fillStyle='#6e4526';for(let y=0;y<Q;y+=4)g.fillRect(X,Y+y,Q,1)}}
+// Preserve terrain separately: the 3D roads must not inherit atlas pixels.
+const terrain=document.createElement('canvas');terrain.width=terrain.height=gc.width;terrain.getContext('2d').drawImage(gc,0,0);
 g.lineCap=g.lineJoin='round';
 // Draw all sidewalks first so a joining street never cuts across another's asphalt.
 for(const[extra,color]of[[ROAD.sidewalk*2,ROAD.curb],[0,ROAD.asphalt]])for(const e of roads){g.strokeStyle=color;g.lineWidth=(e.width+extra)*GS;traceRoad(g,e,GS);g.stroke()}
@@ -87,8 +89,31 @@ for(const e of roads){
 // Keep junctions clear, including the island's turning area.
 mg.globalCompositeOperation='destination-out';for(const n of nodes)if(n.links.length!=2){mg.beginPath();mg.arc(n.x*GS,n.z*GS,(Math.max(...n.links.map(e=>e.width))*.78)*GS,0,PI*2);mg.fill()}
 g.drawImage(markings,0,0);
-const tx=new THREE.CanvasTexture(gc);tx.encoding=THREE.sRGBEncoding;tx.anisotropy=r.capabilities.getMaxAnisotropy();
+const tx=new THREE.CanvasTexture(terrain);tx.encoding=THREE.sRGBEncoding;tx.anisotropy=r.capabilities.getMaxAnisotropy();
 const gr=new THREE.Mesh(new THREE.PlaneGeometry(N*T,N*T).rotateX(-PI/2),new THREE.MeshStandardMaterial({map:tx,roughness:.9}));gr.position.set(N*T/2,0,N*T/2);gr.receiveShadow=true;S.add(gr);
+// World-space ribbons stay sharp at driving distance, independent of atlas resolution.
+// UVs carry distance across a ribbon (or radius on a round cap) for edge coverage.
+function roadMaterial(color){const material=new THREE.MeshStandardMaterial({color:lin(color),roughness:.94,transparent:true,depthWrite:false});material.extensions={derivatives:true};
+ material.onBeforeCompile=shader=>{shader.vertexShader='varying vec2 vRoadEdge;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvRoadEdge=uv;');
+ shader.fragmentShader='varying vec2 vRoadEdge;\n'+shader.fragmentShader.replace('#include <alphatest_fragment>',`float edgeDistance=length(vRoadEdge);float edgeWidth=max(fwidth(edgeDistance),0.0001);diffuseColor.a*=1.0-smoothstep(1.0-edgeWidth,1.0,edgeDistance);
+#include <alphatest_fragment>`)};return material}
+const roadLayers=[{color:ROAD.curb,y:.004,order:-3},{color:ROAD.asphalt,y:.008,order:-2},{color:ROAD.edge,y:.014,order:-1},{color:ROAD.center,y:.014,order:-1}].map(l=>({...l,positions:[],uvs:[]}));
+function roadTriangle(layer,a,b,c){for(const p of[a,b,c]){layer.positions.push(p.x,layer.y,p.z);layer.uvs.push(p.u,p.v||0)}}
+function ribbon(layer,points,width){if(points.length<2)return;const pairs=points.map((p,i)=>{const a=points[Math.max(0,i-1)],b=points[Math.min(points.length-1,i+1)],d=Math.hypot(b.x-a.x,b.z-a.z)||1,nx=-(b.z-a.z)/d*width/2,nz=(b.x-a.x)/d*width/2;
+ return[{x:p.x+nx,z:p.z+nz,u:1},{x:p.x-nx,z:p.z-nz,u:-1}]});
+ for(let i=1;i<pairs.length;i++){const[a,b]=pairs[i-1],[c,d]=pairs[i];roadTriangle(layer,a,c,b);roadTriangle(layer,b,c,d)}}
+function roadCap(layer,p,radius){const center={x:p.x,z:p.z,u:0,v:0};for(let i=0;i<48;i++){const a=i/48*PI*2,b=(i+1)/48*PI*2;roadTriangle(layer,center,{x:p.x+Math.cos(b)*radius,z:p.z+Math.sin(b)*radius,u:Math.cos(b),v:Math.sin(b)},{x:p.x+Math.cos(a)*radius,z:p.z+Math.sin(a)*radius,u:Math.cos(a),v:Math.sin(a)})}}
+function marking(e,offset,width,layer,dashed=false){let run=[],distance=0;
+ const flush=()=>{ribbon(layer,run,width);run=[]};
+ for(let i=0;i<e.points.length;i++){const p=lanePoint(e,i,1,offset);if(i)distance+=Math.hypot(e.points[i].x-e.points[i-1].x,e.points[i].z-e.points[i-1].z);
+ const clear=nodes.every(n=>n.links.length==2||Math.hypot(p.x-n.x,p.z-n.z)>Math.max(...n.links.map(r=>r.width))*.78);
+ if(clear&&(!dashed||distance%8<3))run.push(p);else flush()}flush()}
+for(const e of roads){for(let i=0;i<2;i++){const layer=roadLayers[i],width=e.width+(i==0?ROAD.sidewalk*2:0);ribbon(layer,e.points,width);roadCap(layer,e.a,width/2);roadCap(layer,e.b,width/2)}
+ for(const offset of[-e.width/2+.65,e.width/2-.65])marking(e,offset,.16,roadLayers[2]);
+ for(const offset of[-.22,.22])marking(e,offset,.14,roadLayers[3]);
+ if(e.width==ROAD.boulevard)for(const offset of[-e.width/4,e.width/4])marking(e,offset,.13,roadLayers[2],true)}
+for(const layer of roadLayers){const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(layer.positions,3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(layer.uvs,2));geometry.computeVertexNormals();
+ const mesh=new THREE.Mesh(geometry,roadMaterial(layer.color));mesh.receiveShadow=true;mesh.renderOrder=layer.order;S.add(mesh)}
 const sea=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000).rotateX(-PI/2),new THREE.MeshStandardMaterial({color:lin('#1b6f8f'),roughness:.06,metalness:.3}));sea.position.y=-.1;S.add(sea);
 // buildings, neon, palms
 const pal=['#f7a8c4','#8fe3d6','#ffd38a','#c9a8f7','#f4f1e8','#9ed0ff'],neon=['#ff2bd6','#00f0ff','#ffe600'].map(c=>new THREE.MeshBasicMaterial({color:lin(c).multiplyScalar(5),toneMapped:false}));
@@ -122,7 +147,7 @@ const lh=new THREE.Mesh(new THREE.CylinderGeometry(1.6,2.2,16,10),mat('#fff'));l
 const lt=new THREE.Mesh(new THREE.CylinderGeometry(1.8,1.8,2.5,10),mat('#e33'));lt.position.set(1.5*T,17,20.5*T);S.add(lt);
 const lampC=lin('#ffd9a0'),lampMat=new THREE.MeshBasicMaterial({color:lampC.clone(),toneMapped:false}),lamps=[];
 for(let j=2;j<N;j+=4)if(!inMask(sidewalkMask,8.5*T,j*T))lamps.push([8.5*T,j*T]);
-for(const e of roads)if(e.width!=ROAD.bridge)for(let i=12;i<e.points.length-6;i+=18){const p=e.points[i],a=e.points[i-1],b=e.points[i+1],d=Math.hypot(b.x-a.x,b.z-a.z),off=e.width/2+1.4;for(const side of[-1,1]){const x=p.x-(b.z-a.z)/d*off*side,z=p.z+(b.x-a.x)/d*off*side;if(!inMask(asphaltMask,x,z)&&tile(x,z)!=4)lamps.push([x,z])}}
+for(const e of roads)if(e.width!=ROAD.bridge)for(let i=24;i<e.points.length-12;i+=36){const p=e.points[i],a=e.points[i-1],b=e.points[i+1],d=Math.hypot(b.x-a.x,b.z-a.z),off=e.width/2+1.4;for(const side of[-1,1]){const x=p.x-(b.z-a.z)/d*off*side,z=p.z+(b.x-a.x)/d*off*side;if(!inMask(asphaltMask,x,z)&&tile(x,z)!=4)lamps.push([x,z])}}
 const gcv=document.createElement('canvas');gcv.width=gcv.height=64;{const c=gcv.getContext('2d'),gd=c.createRadialGradient(32,32,0,32,32,32);gd.addColorStop(0,'rgba(255,255,255,1)');gd.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=gd;c.fillRect(0,0,64,64)}
 const ptex=new THREE.CanvasTexture(gcv),glowMat=new THREE.MeshBasicMaterial({map:ptex,color:lin('#ffcf8a'),transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false});
 {const po=new THREE.InstancedMesh(box,mat('#2a2a2a'),lamps.length),he=new THREE.InstancedMesh(box,lampMat,lamps.length),gl=new THREE.InstancedMesh(new THREE.PlaneGeometry(12,12).rotateX(-PI/2),glowMat,lamps.length),M=new THREE.Matrix4();
@@ -161,10 +186,10 @@ function mkCar(n){const t=TY[n],o=new THREE.Group(),col=['#e33','#fd0','#0cf','#
 const types=Object.keys(TY),rt=()=>types[R()*4|0];
 function lanePoint(e,i,dir=1,offset=null){const p=e.points[i],a=e.points[Math.max(0,i-1)],b=e.points[Math.min(e.points.length-1,i+1)],d=Math.hypot(b.x-a.x,b.z-a.z)||1,l=offset==null?(e.width==ROAD.boulevard?e.width*.34:e.width*.25):offset;
  return{x:p.x-(b.z-a.z)/d*l*dir,z:p.z+(b.x-a.x)/d*l*dir,a:Math.atan2((b.z-a.z)*dir,(b.x-a.x)*dir)}}
-const start=lanePoint(coastStart,22,1,8.5);
+const start=lanePoint(coastStart,44,1,8.5);
 for(let c=0;c<10;c++){const e=roads[1+(R()*(roads.length-2)|0)],i=8+(R()*(e.points.length-16)|0),p=lanePoint(e,i,1,e.width/2-1.8),v=mkCar(rt());v.x=p.x;v.z=p.z;v.a=p.a}
 {const v=mkCar('Kaze R');v.x=start.x;v.z=start.z;v.a=start.a}
-// Follow the same sampled curves as the road texture, in right-hand lanes.
+// Follow the same sampled curves as the visible roads, in right-hand lanes.
 function driveLane(e,dir){const path=e.points.map((_,i)=>lanePoint(e,i,dir));if(dir<0)path.reverse();
  const from=dir>0?e.a:e.b,to=dir>0?e.b:e.a,trim=n=>n.links.length==1?7:12;
  while(path.length>2&&Math.hypot(path[0].x-from.x,path[0].z-from.z)<trim(from))path.shift();
