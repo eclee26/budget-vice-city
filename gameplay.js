@@ -22,7 +22,7 @@
   class DrivingGame {
     constructor() {
       this.settings = {quality:graphics.mobile?'medium':'high', resolution:100, fps:false,
-        motion:!matchMedia('(prefers-reduced-motion: reduce)').matches};
+        motion:!matchMedia('(prefers-reduced-motion: reduce)').matches, shake:!matchMedia('(prefers-reduced-motion: reduce)').matches, blur:!matchMedia('(prefers-reduced-motion: reduce)').matches, steering:1, cameraSensitivity:1, units:'kmh'};
       this.best = {}; this.completed = {}; this.history = [];
       this.lastVehicle = null; this.activity = null; this.result = null; this.transition = null;
       this.elapsed = 0; this.saveTimer = 0; this.lastSave = 0;
@@ -34,8 +34,8 @@
     }
 
     init() {
-      this.buildUI(); this.makeMarker(); this.restore(); this.applySettings();
-      this.bind(); this.hud(); this.renderMenu();
+      this.buildUI(); this.makeMarker(); this.makePovCabin(); this.restore(); this.applySettings();if(car&&camMode===3)this.povCamera();this.updatePovCabin();
+      this.bind(); updateHud(); this.renderMenu(); window.gameBoot?.ready();
       window.addEventListener('pagehide', () => this.save());
       document.addEventListener('visibilitychange', () => { if(document.hidden) this.save(); });
       window.addEventListener('storage', event => {
@@ -64,18 +64,27 @@
       list.insertAdjacentHTML('beforeend','<dt>Horn</dt><dd><kbd>B</kbd></dd><dt>Headlights</dt><dd><kbd>L</kbd> · Auto / on / off</dd><dt>Left / right signal</dt><dd><kbd>Z / X</kbd></dd><dt>Hazard lights</dt><dd><kbd>V</kbd></dd>');
       help.insertAdjacentHTML('beforeend',`<nav class="gp-tabs" aria-label="Pause menu sections">${['activities','vehicle','settings','controls'].map(name=>`<button type="button" data-pane="${name}" aria-pressed="false">${name[0].toUpperCase()+name.slice(1)}</button>`).join('')}</nav><p id="menu-feedback" role="status" style="min-height:1.5em;color:var(--muted);font-size:12px">Game paused. Choose a section.</p>
         <section id="gp-activities" class="gp-pane"><h2>Take a drive</h2><p id="activity-status" role="status">Enter a stopped car, then choose an activity. Checkpoints appear in the world and on the minimap.</p>${Object.entries(activities).map(([id,a])=>`<article class="gp-activity"><div><h3>${a.name}</h3><p>${a.description}</p><small id="best-${id}">No best time yet</small></div><button type="button" class="gp-button gp-primary" data-activity="${id}">Start</button></article>`).join('')}<button type="button" id="cancel-activity" class="gp-button" hidden>Cancel activity</button></section>
-        <section id="gp-vehicle" class="gp-pane" hidden><h2>Vehicle</h2><p id="vehicle-menu-status">Enter a stopped car to use vehicle controls.</p><div class="gp-actions"><button type="button" id="vehicle-toggle" class="gp-button">Enter nearby car</button><button type="button" id="menu-lights" class="gp-button">Lights: Auto</button><button type="button" id="signal-left" class="gp-button" aria-pressed="false">Left signal · Z</button><button type="button" id="signal-right" class="gp-button" aria-pressed="false">Right signal · X</button><button type="button" id="signal-hazard" class="gp-button" aria-pressed="false">Hazards · V</button></div><p>Use B or the Horn button while driving. Stop before entering or leaving a car.</p></section>
-        <section id="gp-settings" class="gp-pane" hidden><h2>Settings</h2><fieldset class="gp-fields"><legend>Graphics and feedback</legend><label class="gp-row" for="quality-setting">Graphics preset<select id="quality-setting"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label><label class="gp-row gp-range" for="resolution-setting">Render scale <output id="resolution-value">100%</output><input id="resolution-setting" type="range" min="50" max="100" step="5" value="100"></label><label class="gp-row" for="fps-setting">Show FPS<input id="fps-setting" type="checkbox"></label><label class="gp-row" for="motion-setting">Suspension and camera feedback<input id="motion-setting" type="checkbox"></label></fieldset><p>Lower the preset or render scale if the game feels slow. Menus remain crisp at every render scale.</p><div class="gp-save"><h2>Progress</h2><p id="save-status"></p><button type="button" id="save-progress" class="gp-button">Save this drive</button><p>Location, chosen car, settings, best times and active activity are saved here. Your car resumes at a standstill. No account is needed.</p></div></section>`);
+        <section id="gp-vehicle" class="gp-pane" hidden><h2>Vehicle</h2><p id="vehicle-menu-status">Enter a stopped car to use vehicle controls.</p><div class="gp-actions"><button type="button" id="vehicle-toggle" class="gp-button">Enter nearby car</button><button type="button" id="menu-camera" class="gp-button">Camera: Chase</button><button type="button" id="recover-vehicle" class="gp-button">Recover vehicle</button><button type="button" id="menu-lights" class="gp-button">Lights: Auto</button><button type="button" id="signal-left" class="gp-button" aria-pressed="false">Left signal · Z</button><button type="button" id="signal-right" class="gp-button" aria-pressed="false">Right signal · X</button><button type="button" id="signal-hazard" class="gp-button" aria-pressed="false">Hazards · V</button></div><p>Stop before entering or leaving a car. Recover vehicle moves your current or last car to a clear nearby road without repairing damage or resetting activity time.</p></section>
+        <section id="gp-settings" class="gp-pane" hidden><h2>Settings</h2><fieldset class="gp-fields"><legend>Graphics and feedback</legend><label class="gp-row" for="quality-setting">Graphics preset<select id="quality-setting"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label><label class="gp-row gp-range" for="resolution-setting">Render scale <output id="resolution-value">100%</output><input id="resolution-setting" type="range" min="50" max="100" step="5" value="100"></label><label class="gp-row" for="fps-setting">Show FPS<input id="fps-setting" type="checkbox"></label><label class="gp-row" for="motion-setting">Suspension and camera lean<input id="motion-setting" type="checkbox"></label><label class="gp-row" for="shake-setting">Camera shake<input id="shake-setting" type="checkbox"></label><label class="gp-row" for="blur-setting">Motion blur<input id="blur-setting" type="checkbox"></label><label class="gp-row" for="units-setting">Speed units<select id="units-setting"><option value="kmh">km/h</option><option value="mph">MPH</option></select></label><label class="gp-row gp-range" for="steering-setting">Steering sensitivity<output id="steering-value">100%</output><input id="steering-setting" type="range" min="50" max="150" step="5" value="100"></label><label class="gp-row gp-range" for="camera-setting">Camera sensitivity<output id="camera-value">100%</output><input id="camera-setting" type="range" min="25" max="200" step="5" value="100"></label></fieldset><p>Lower the preset or render scale if the game feels slow. Menus remain crisp at every render scale.</p><div class="gp-save"><h2>Progress</h2><p id="save-status"></p><button type="button" id="save-progress" class="gp-button">Save this drive</button><p>Location, chosen car, settings, best times and active activity are saved here. Your car resumes at a standstill. No account is needed.</p></div></section>`);
       help.append(controls);
+      $('engine-status').insertAdjacentHTML('afterend','<progress id="rpm-bar" max="1" value="0" aria-label="Engine speed"></progress><div id="vehicle-signals" aria-label="Vehicle lights and signals"></div>');
+      $('mm').insertAdjacentHTML('afterend','<button id="map-toggle" class="help-button" aria-controls="mm" aria-expanded="false" title="Enlarge map (G)">Map</button><output id="heading-status" aria-label="Heading">N</output><button id="interaction-prompt" hidden></button><div id="target-direction" hidden><span aria-hidden="true">➤</span><small></small></div>');
+      $('h').append($('interaction-prompt'));
+      this.highlight=new THREE.BoxHelper(undefined,0x76e4e1);this.highlight.visible=false;this.highlight.material.depthTest=false;this.highlight.material.transparent=true;this.highlight.material.opacity=.8;this.highlight.renderOrder=10;S.add(this.highlight);
       $('vehicle-hud').insertAdjacentHTML('beforeend','<div class="gp-quick"><button type="button" id="horn-control" title="Horn (B)">Horn · B</button><button type="button" id="lights-control" title="Headlights (L)">Lights: Auto</button></div>');
       document.body.insertAdjacentHTML('beforeend','<section id="activity-hud" aria-label="Current driving activity" hidden><strong id="activity-name"></strong><p id="activity-target"></p><div class="gp-meter"><span id="activity-time"></span><button type="button" id="activity-menu">Menu</button></div></section><output id="fps-counter" aria-label="Rendering frame rate" hidden>— FPS</output><div id="game-notice" role="status" aria-live="polite" hidden></div>');
     }
 
     bind() {
+      $('h').append($('game-notice'));
       for(const button of help.querySelectorAll('[data-pane]')) button.onclick=()=>this.showPane(button.dataset.pane);
       for(const button of help.querySelectorAll('[data-activity]')) button.onclick=()=>this.startActivity(button.dataset.activity);
       $('cancel-activity').onclick=()=>this.finishActivity(false,'Activity cancelled.');
       $('activity-menu').onclick=()=>{this.showPane('activities');openHelp();};
+      $('map-toggle').onclick=()=>this.toggleMap();
+      $('interaction-prompt').onclick=()=>this.act();
+      $('menu-camera').onclick=()=>cyc();
+      $('recover-vehicle').onclick=()=>this.recoverVehicle();
       $('vehicle-toggle').onclick=()=>{this.act();if(this.transition)help.close();};
       $('horn-control').onclick=()=>this.horn();
       for(const id of ['lights-control','menu-lights']) $(id).onclick=()=>this.toggleLights();
@@ -84,7 +93,11 @@
       $('resolution-setting').oninput=e=>{this.settings.resolution=Number(e.target.value);this.applySettings();};
       $('resolution-setting').onchange=()=>this.save();
       $('fps-setting').onchange=e=>{this.settings.fps=e.target.checked;this.applySettings();this.save();};
-      $('motion-setting').onchange=e=>{this.settings.motion=e.target.checked;this.save();};
+      for(const name of ['motion','shake','blur']) $(name+'-setting').onchange=e=>{this.settings[name]=e.target.checked;this.save();};
+      $('units-setting').onchange=e=>{this.settings.units=e.target.value;updateHud();this.save();};
+      for(const [id,name] of [['steering','steering'],['camera','cameraSensitivity']]){
+        $(id+'-setting').oninput=e=>{this.settings[name]=Number(e.target.value)/100;$(id+'-value').value=e.target.value+'%';};$(id+'-setting').onchange=()=>this.save();
+      }
       $('save-progress').onclick=()=>this.save(true);
       help.addEventListener('close',()=>{this.save();this.lastGear=car?.g??null;});
     }
@@ -106,6 +119,9 @@
       $('activity-status').textContent=this.activity?`${activities[this.activity.kind].name} is paused. Resume driving or cancel it below.`:this.result?.message||(!car?'Enter a stopped car, then choose an activity.':'Choose an activity. Follow the cyan checkpoint and minimap marker.');
       $('cancel-activity').hidden=!this.activity;
       $('vehicle-toggle').textContent=car?'Exit vehicle':'Enter nearby car';
+      $('menu-camera').disabled=!car||!!this.transition;
+      $('menu-camera').textContent='Camera: '+CAMERA_VIEWS[camMode];
+      $('recover-vehicle').disabled=!!this.transition||!(car||this.lastVehicle);
       $('vehicle-toggle').disabled=!!this.transition||(car?speed(car)>=1:!this.nearbyCar());
       $('vehicle-menu-status').textContent=this.transition?'Vehicle interaction in progress.':car?`${car.n}${speed(car)>=1?' · Stop before getting out.':''}`:'Enter a stopped car to use vehicle controls.';
       for(const id of ['menu-lights','signal-left','signal-right','signal-hazard']) $(id).disabled=!car||!!this.transition;
@@ -115,9 +131,10 @@
       this.renderSaveStatus();
     }
     renderSaveStatus() { if($('save-status').textContent!==this.storageMessage)$('save-status').textContent=this.storageMessage; }
-    notify(message) { if(help.open){$('menu-feedback').textContent=message;return;}$('game-notice').textContent=message;$('game-notice').hidden=false;this.noticeUntil=performance.now()+3800; }
+    notify(message,urgent=false) { $('game-notice').dataset.urgent=String(urgent);if(help.open){$('menu-feedback').textContent=message;return;}$('game-notice').textContent=message;$('game-notice').hidden=false;this.noticeUntil=performance.now()+3800; }
 
     key(key,event) {
+      if(key==='g'){event.preventDefault();if(!event.repeat)this.toggleMap();return true;}
       const actions={b:()=>this.horn(),l:()=>this.toggleLights(),z:()=>this.signal(-1),x:()=>this.signal(1),v:()=>this.signal(2)};
       if(!actions[key]) return false;
       event.preventDefault(); if(!event.repeat)actions[key](); return true;
@@ -134,6 +151,8 @@
       graphics.detailRange=Math.min(p.detail,graphics.mobile?70:110);graphics.vehicleRange=Math.min(p.vehicle,graphics.mobile?38:60);updateScenery();
       $('quality-setting').value=this.settings.quality;$('resolution-setting').value=this.settings.resolution;
       $('resolution-value').value=`${this.settings.resolution}%`;$('resolution-setting').setAttribute('aria-valuetext',`${this.settings.resolution} percent`);
+      for(const name of ['shake','blur']) $(name+'-setting').checked=this.settings[name];
+      $('units-setting').value=this.settings.units;for(const [id,name] of [['steering','steering'],['camera','cameraSensitivity']]){$(id+'-setting').value=Math.round(this.settings[name]*100);$(id+'-value').value=Math.round(this.settings[name]*100)+'%';}
       $('fps-setting').checked=this.settings.fps;$('motion-setting').checked=this.settings.motion;$('fps-counter').hidden=!this.settings.fps;
     }
 
@@ -143,6 +162,56 @@
       if(!this.frameStart)this.frameStart=now;
       if(now-this.frameStart>=700){if(this.settings.fps)$('fps-counter').textContent=`${Math.round(this.frameCount*1000/(now-this.frameStart))} FPS`;this.frameCount=0;this.frameStart=now;}
       if(this.noticeUntil&&now>=this.noticeUntil){$('game-notice').hidden=true;this.noticeUntil=0;}
+    }
+
+    toggleMap() {
+      const expanded=document.body.classList.toggle('map-expanded');$('map-toggle').setAttribute('aria-expanded',String(expanded));$('map-toggle').textContent=expanded?'Close map':'Map';
+      const size=expanded?600:150;if($('mm').width!==size){$('mm').width=$('mm').height=size;}mini();
+    }
+    recoverVehicle() {
+      const v=car||this.lastVehicle;if(!v||this.transition)return;
+      const candidates=[];for(const e of roads)for(let i=2;i<e.points.length-2;i+=3){const p=lanePoint(e,i);candidates.push({...p,d:Math.hypot(p.x-v.x,p.z-v.z)});}
+      candidates.sort((a,b)=>a.d-b.d);
+      const point=candidates.find(p=>this.clearFootprint(p,v.t)&&!cars.some(o=>o!==v&&vehicleOverlap({...v,...p},o))&&(!car?Math.hypot(p.x-P.x,p.z-P.z)>v.t.L*.6:true));
+      if(!point){this.notify('No clear road nearby. Try again after traffic moves.',true);return;}
+      Object.assign(v,{x:point.x,z:point.z,a:point.a,vx:0,vz:0,yr:0,ax:0,ay:0,st:0,roll:0,pitch:0,rollV:0,pitchV:0,heave:0,heaveVelocity:0,thr:0,brk:0,hold:0,g:1,contacts:null,ai:null});
+      v.o.position.set(v.x,0,v.z);v.o.rotation.set(0,-v.a,0);
+      if(car){P.x=v.x;P.z=v.z;P.a=v.a;ca=v.a;cp.set(v.x-Math.cos(v.a)*10,3,v.z-Math.sin(v.a)*10);}
+      this.visualPrevious=null;this.save();this.notify('Vehicle recovered to a clear road. Condition unchanged.');this.hud();
+    }
+    captureVisual() {
+      // Object membership changes only on vehicle creation; reuse all pose buffers.
+      if(!this.poseBuffer||this.poseCarCount!==cars.length){
+        const objects=[P.o,cam];for(const v of cars){objects.push(v.o);for(const w of v.wheels){objects.push(w.steer,w.spin);if(w.low)objects.push(w.low);}}
+        this.poseBuffer=objects.map(o=>({o,position:o.position.clone(),quaternion:o.quaternion.clone(),currentPosition:o.position.clone(),currentQuaternion:o.quaternion.clone()}));this.poseCarCount=cars.length;
+      }
+      this.visualPrevious=this.poseBuffer;for(const p of this.poseBuffer){p.position.copy(p.o.position);p.quaternion.copy(p.o.quaternion);}this.previousFov=cam.fov;
+    }
+    interpolateVisual(alpha) {
+      if(!this.visualPrevious||help.open||document.hidden)return;
+      const t=clamp(alpha,0,1);this.visualCurrent=this.visualPrevious;this.currentFov=cam.fov;
+      for(const p of this.visualPrevious){p.currentPosition.copy(p.o.position);p.currentQuaternion.copy(p.o.quaternion);
+        if(p.position.distanceToSquared(p.currentPosition)>100)continue;
+        p.o.position.lerpVectors(p.position,p.currentPosition,t);p.o.quaternion.slerpQuaternions(p.quaternion,p.currentQuaternion,t);
+      }
+      cam.fov=this.previousFov+(this.currentFov-this.previousFov)*t;if(cam.fov!==this.currentFov)cam.updateProjectionMatrix();
+    }
+    restoreVisual() {
+      if(!this.visualCurrent)return;for(const p of this.visualCurrent){p.o.position.copy(p.currentPosition);p.o.quaternion.copy(p.currentQuaternion);}const changed=cam.fov!==this.currentFov;cam.fov=this.currentFov;if(changed)cam.updateProjectionMatrix();this.visualCurrent=null;
+    }
+    navigationHud() {
+      const degrees=((P.a*180/PI+90)%360+360)%360,headings=['N','NE','E','SE','S','SW','W','NW'];$('heading-status').textContent=headings[Math.round(degrees/45)%8]+' '+Math.round(degrees)+'°';
+      const prompt=$('interaction-prompt');this.highlight.visible=false;prompt.hidden=!!this.transition||!!car;
+      if(!prompt.hidden){const v=this.nearbyCar();if(v){const available=!!this.exitPoint(v,1);prompt.textContent=available?(document.body.classList.contains('touch-enabled')?'Enter '+v.n:'E · Enter '+v.n):v.n+' · Both sides blocked';prompt.disabled=!available;this.highlight.setFromObject(v.o);this.highlight.visible=true;}
+        else {prompt.hidden=true;}}
+      if(car){$('rpm-bar').value=clamp((car.rpm||900)/car.t.red,0,1);$('rpm-bar').dataset.redline=String(car.rpm>car.t.red*.9);$('rpm-bar').setAttribute('aria-valuetext',Math.round(car.rpm||900)+' RPM');
+        $('vehicle-signals').textContent=(car.ind===2?'◀ Hazards ▶':car.ind===-1?'◀ Left signal':car.ind===1?'Right signal ▶':'Signals off')+' · '+(this.lightLevel(car)>.3?'Lights on':'Lights off');
+      }
+      document.querySelector('.unit').textContent=this.settings.units==='mph'?'MPH':'km/h';
+      const direction=$('target-direction'),target=this.activity?.targets[this.activity.index];direction.hidden=!target||help.open;
+      if(target&&!help.open){cam.updateMatrixWorld();const point=new THREE.Vector3(target.x,1,target.z).project(cam),inView=point.z>-1&&point.z<1&&Math.abs(point.x)<.82&&Math.abs(point.y)<.72;
+        direction.hidden=inView;if(!inView){const bearing=Math.atan2(target.z-P.z,target.x-P.x),view=camMode?P.a+yo:ca+yo,angle=wrap(bearing-view);direction.querySelector('span').style.transform='rotate('+(angle*180/PI-90)+'deg)';direction.querySelector('small').textContent='Target · '+Math.round(Math.hypot(target.x-P.x,target.z-P.z))+' m';}
+      }
     }
 
     sound(kind) {
@@ -179,7 +248,7 @@
       const exiting=!!car,v=car||this.nearbyCar();
       if(!v||speed(v)>=1){this.notify(car?'Stop before leaving the car.':'Move closer to a stopped car.');return;}
       const rightX=-Math.sin(v.a),rightZ=Math.cos(v.a),side=exiting?1:((P.x-v.x)*rightX+(P.z-v.z)*rightZ<0?-1:1),point=this.exitPoint(v,side);
-      if(!point){this.notify('Both sides are blocked. Move the car before getting out.');return;}
+      if(!point){this.notify(exiting?'Both sides are blocked. Move the car or use Recover vehicle.':'Both sides are blocked. Try another car.',true);return;}
       v.ai=null;v.vx=v.vz=0;v.yr=0;
       this.transition={v,exiting,point,from:{x:P.x,z:P.z},elapsed:0,door:this.door(v,point.side)};
       resetInput();this.sound('door');this.renderMenu();
@@ -204,18 +273,69 @@
       if(car){this.syncLights(car);if(this.lastGear!==null&&car.g!==this.lastGear&&speed(car)>2)this.sound('shift');this.lastGear=car.g;
         if(car.ind===-1||car.ind===1){if(Math.abs(wrap(car.a-(car.signalAngle??car.a)))>.35)car.signalTurned=true;if(car.signalTurned&&Math.abs(car.st)<.05)car.ind=0;}
       }else this.lastGear=null;
-      for(const v of cars){if(v.playerHead&&v!==car)this.syncLights(v);const sp=speed(v),surface=tile(v.x,v.z),amplitude=sp>1?(surface===1?.003:surface===0?.014:.035):0;
-        if(this.settings.motion&&sp>2&&v.lastFeedbackSurface!==undefined&&surface!==v.lastFeedbackSurface)v.heaveVelocity=(v.heaveVelocity||0)+(surface===0?.36:-.22)*Math.min(1,sp/12);v.lastFeedbackSurface=surface;v.feedbackDistance=(v.feedbackDistance||0)+sp*DT;const target=this.settings.motion?Math.sin(v.feedbackDistance*4.8)*amplitude+Math.sin(v.feedbackDistance*9.1)*amplitude*.35:0;
-        v.heaveVelocity=(v.heaveVelocity||0)+((target-(v.heave||0))*80-(v.heaveVelocity||0)*12)*DT;v.heave=(v.heave||0)+v.heaveVelocity*DT;v.o.position.y=v.heave;
-        for(const wheel of v.wheels)wheel.steer.position.y=(v.t.r||.32)-v.heave;
+      for(const v of cars){if(v.playerHead&&v!==car)this.syncLights(v);
+        v.o.position.y=this.settings.motion?(v.heave||0):0;
+        v.o.rotation.set(this.settings.motion?v.roll:0,-v.a,this.settings.motion?v.pitch:0);
+        for(const wheel of v.wheels){const contact=v.contacts?.find(w=>w.front===wheel.front&&Math.sign(w.q)===Math.sign(wheel.steer.position.z));wheel.steer.position.y=(v.t.r||.32)+(this.settings.motion?(contact?.compression||0):0);}
       }
       if(this.activity)this.updateActivity();
       if(this.saveTimer>=5){this.saveTimer=0;this.save();}
     }
     cameraFeedback() {
-      if(!car||!this.settings.motion||this.transition)return;
+      if(!car||camMode===3||!this.settings.motion||this.transition)return;
       const brake=car.brk||0;cam.position.y+=(car.heave||0)*.4-brake*.06;
       cam.rotateZ(clamp(-(car.yr||0)*speed(car)*.0006,-.015,.015));
+    }
+
+    makePovCabin() {
+      this.povCabin=new THREE.Group();this.povCabin.visible=false;S.add(this.povCabin);
+      this.povInterior=new THREE.Group();this.povCabin.add(this.povInterior);
+      const trim=new THREE.MeshStandardMaterial({color:lin('#20262b'),roughness:.92}),rubber=new THREE.MeshStandardMaterial({color:lin('#11161a'),roughness:1}),metal=new THREE.MeshStandardMaterial({color:lin('#626c74'),roughness:.5,metalness:.35});
+      const part=(parent,material,x,y,z,w,h,d)=>{const mesh=new THREE.Mesh(box,material);mesh.position.set(x,y,z);mesh.scale.set(w,h,d);parent.add(mesh);return mesh;};
+      part(this.povInterior,trim,.86,.94,0,.52,.24,1.7);
+      part(this.povInterior,rubber,.72,1.075,0,.57,.035,1.72);
+      part(this.povInterior,rubber,.05,.38,0,1.7,.045,1.7);
+      part(this.povInterior,trim,.43,1.04,-.40,.43,.055,.055);
+      for(const side of [-1,1]){
+        part(this.povInterior,trim,-.08,.89,side*.85,1.65,.30,.055);
+        const pillar=new THREE.Mesh(new THREE.CylinderGeometry(.029,.04,1,6),trim),a=new THREE.Vector3(1.12,1.0,side*.82),b=new THREE.Vector3(.52,1.66,side*.78),delta=b.clone().sub(a);
+        pillar.position.copy(a).add(b).multiplyScalar(.5);pillar.scale.y=delta.length();pillar.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());this.povInterior.add(pillar);
+      }
+      part(this.povInterior,trim,.50,1.66,0,.09,.045,1.62);
+      // A modest bonnet edge grounds the seating view without rendering an opaque exterior cabin.
+      this.povBonnet=part(this.povInterior,new THREE.MeshStandardMaterial({color:lin('#394d58'),roughness:.35}),1.67,.82,0,1.12,.055,1.6);
+      this.povWheel=new THREE.Group();this.povWheel.position.set(.23,1.04,-.40);this.povInterior.add(this.povWheel);
+      const rim=new THREE.Mesh(new THREE.TorusGeometry(.175,.018,6,28),rubber);rim.rotation.y=Math.PI/2;this.povWheel.add(rim);
+      part(this.povWheel,trim,0,0,0,.055,.085,.11);
+      for(const angle of [0,Math.PI*2/3,Math.PI*4/3]){const spoke=part(this.povWheel,metal,0,Math.sin(angle)*.085,Math.cos(angle)*.085,.025,.022,.16);spoke.rotation.x=-angle;}
+      const canvas=document.createElement('canvas');canvas.width=256;canvas.height=128;const ctx=canvas.getContext('2d');ctx.fillStyle='#111a20';ctx.fillRect(0,0,256,128);
+      for(const [cx,label] of [[66,'RPM'],[190,'km/h']]){ctx.strokeStyle='#a8c5ce';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,62,49,Math.PI*.75,Math.PI*2.25);ctx.stroke();for(let i=0;i<=8;i++){const a=Math.PI*.75+i/8*Math.PI*1.5;ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*41,62+Math.sin(a)*41);ctx.lineTo(cx+Math.cos(a)*47,62+Math.sin(a)*47);ctx.stroke();}ctx.fillStyle='#cbe7e3';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText(label,cx,102);}
+      const texture=new THREE.CanvasTexture(canvas);texture.encoding=THREE.sRGBEncoding;
+      const cluster=new THREE.Mesh(new THREE.PlaneGeometry(.44,.22),new THREE.MeshBasicMaterial({map:texture,toneMapped:false}));cluster.rotation.y=-Math.PI/2;cluster.position.set(.575,1.145,-.40);this.povInterior.add(cluster);
+      this.povNeedles=[];const needleMat=new THREE.MeshBasicMaterial({color:lin('#ffb790').multiplyScalar(1.4),toneMapped:false});
+      for(const z of [-.293,-.507]){const pivot=new THREE.Group();pivot.position.set(.569,1.148,z);part(pivot,needleMat,0,.033,0,.006,.069,.004);this.povInterior.add(pivot);this.povNeedles.push(pivot);}
+      this.povBike=new THREE.Group();this.povCabin.add(this.povBike);part(this.povBike,metal,.42,1.0,0,.055,.035,.66);for(const z of [-.31,.31])part(this.povBike,rubber,.42,1.0,z,.11,.045,.12);
+      this.povCabin.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;}});
+      this.povEye=new THREE.Vector3();this.povLook=new THREE.Vector3();this.povResponse={x:0,y:0,z:0};
+    }
+    povCamera() {
+      const v=car,bike=v.n==='Bike',scaleX=bike?1:v.t.L/4.55,scaleZ=bike?1:v.t.W/1.82,scaleY=v.n==='Van'?1.55:v.n==='Kaze R'?1.08:1;
+      const motion=this.settings.motion,response=this.povResponse;
+      const tx=motion?clamp(-(v.ax||0)*.002,-.018,.018):0,tz=motion?clamp(-(v.ay||0)*.002,-.018,.018):0;
+      response.x+=(tx-response.x)*.12;response.z+=(tz-response.z)*.12;
+      if(!motion)response.x=response.z=0;
+      this.povEye.set((bike?-.2:-.30)*scaleX+response.x,bike?1.55:1.32*scaleY,(bike?0:-.40*scaleZ)+response.z).applyQuaternion(v.o.quaternion).add(v.o.position);
+      cam.position.copy(this.povEye);const yaw=v.a+clamp(yo,-1.45,1.45),pitch=clamp(pt,-.3,.65)*.65+.015;
+      this.povLook.set(cam.position.x+Math.cos(yaw)*20,cam.position.y-Math.tan(pitch)*20,cam.position.z+Math.sin(yaw)*20);cam.lookAt(this.povLook);
+      if(motion)cam.rotateZ(clamp(-v.roll*.22,-.018,.018));
+      cam.fov=58;cam.updateProjectionMatrix();cp.copy(cam.position);
+    }
+    updatePovCabin() {
+      this.povCabin.visible=!!car&&camMode===3;if(!this.povCabin.visible)return;
+      const v=car,bike=v.n==='Bike';this.povCabin.position.copy(v.o.position);this.povCabin.quaternion.copy(v.o.quaternion);this.povCabin.scale.set(bike?1:v.t.L/4.55,v.n==='Van'?1.55:v.n==='Kaze R'?1.08:1,bike?1:v.t.W/1.82);
+      this.povInterior.visible=!bike;this.povBike.visible=bike;this.povWheel.rotation.x=-v.st*9;this.povBike.rotation.y=-v.st*.35;
+      this.povNeedles[0].rotation.x=Math.PI*.75-clamp((v.rpm||900)/v.t.red,0,1)*Math.PI*1.5;
+      this.povNeedles[1].rotation.x=Math.PI*.75-clamp(speed(v)*3.6/240,0,1)*Math.PI*1.5;
     }
 
     makeMarker() {
@@ -279,7 +399,8 @@
     }
 
     hud() {
-      const a=this.activity;$('activity-hud').hidden=!a;
+      const label=CAMERA_VIEWS[camMode];$('camera-control').textContent=camMode===3?'POV':'Camera';$('camera-control').setAttribute('aria-label',label+'. Change camera view');$('camera-control').title='Camera: '+label+' (C)';
+      this.navigationHud();const a=this.activity;$('activity-hud').hidden=!a;
       if(a){$('activity-name').textContent=activities[a.kind].name;const distance=car?Math.round(Math.hypot(car.x-a.targets[a.index].x,car.z-a.targets[a.index].z)):Math.round(Math.hypot(P.x-a.targets[a.index].x,P.z-a.targets[a.index].z));
         $('activity-target').textContent=a.kind==='parking'?`Park facing the arrow · hold ${a.hold.toFixed(1)} / 3.0 s`:a.kind==='delivery'?`${a.index===0?'Collect parcel':'Deliver parcel'} · ${distance} m · stop and hold`: `Checkpoint ${a.index+1} / ${a.targets.length} · ${distance} m`;
         $('activity-time').textContent=`${clock(Math.max(0,a.limit-a.elapsed))} remaining`;
@@ -311,20 +432,22 @@
       let data;try{const text=localStorage.getItem(SAVE_KEY);if(!text)return;data=JSON.parse(text);}catch{this.storageMessage='The previous save could not be read. A new drive has started.';return;}
       if(!data||data.version!==1){this.storageMessage='This save version is not supported. A new drive has started.';return;}
       const settings=data.settings||{};if(profiles[settings.quality])this.settings.quality=settings.quality;if(finite(settings.resolution))this.settings.resolution=clamp(Math.round(settings.resolution/5)*5,50,100);
-      for(const key of ['fps','motion'])if(typeof settings[key]==='boolean')this.settings[key]=settings[key];
+      for(const key of ['fps','motion','shake','blur'])if(typeof settings[key]==='boolean')this.settings[key]=settings[key];
+      if(['kmh','mph'].includes(settings.units))this.settings.units=settings.units;
+      for(const [key,lo,hi] of [['steering',.5,1.5],['cameraSensitivity',.25,2]])if(finite(settings[key]))this.settings[key]=clamp(settings[key],lo,hi);
       for(const kind of Object.keys(activities)){if(finite(data.best?.[kind])&&data.best[kind]>=0&&data.best[kind]<=3600)this.best[kind]=data.best[kind];if(Number.isInteger(data.completed?.[kind])&&data.completed[kind]>=0)this.completed[kind]=Math.min(1000000,data.completed[kind]);}
       if(finite(data.timeOfDay))tod=((data.timeOfDay%1)+1)%1;
       if(this.clearFootprint(data.position,{L:.6,W:.6})){P.x=data.position.x;P.z=data.position.z;P.a=data.position.a;}
       const saved=data.vehicle;
-      if(saved&&TY[saved.name]&&this.clearFootprint(saved,TY[saved.name])){const v=cars.find(v=>v.n===saved.name&&!v.ai)||mkCar(saved.name);v.ai=null;v.x=saved.x;v.z=saved.z;v.a=saved.a;v.vx=v.vz=v.yr=0;v.dmg=finite(saved.dmg)?clamp(saved.dmg,0,200):0;v.lightsMode=['auto','on','off'].includes(saved.lights)?saved.lights:'auto';this.lastVehicle=v;if(data.driving!==false){car=v;P.x=v.x;P.z=v.z;P.a=v.a;P.o.visible=false;}
+      if(saved&&TY[saved.name]&&this.clearFootprint(saved,TY[saved.name])){const v=cars.find(v=>v.n===saved.name&&!v.ai)||mkCar(saved.name);v.ai=null;v.x=saved.x;v.z=saved.z;v.a=saved.a;v.vx=v.vz=v.yr=0;v.contacts=null;v.heave=v.heaveVelocity=0;v.o.position.set(v.x,0,v.z);v.o.rotation.set(0,-v.a,0);v.dmg=finite(saved.dmg)?clamp(saved.dmg,0,200):0;v.lightsMode=['auto','on','off'].includes(saved.lights)?saved.lights:'auto';this.lastVehicle=v;if(data.driving!==false){car=v;P.x=v.x;P.z=v.z;P.a=v.a;P.o.visible=false;}
         // Keep a restored car clear of randomly spawned traffic/parked cars.
         for(const other of cars)if(other!==v&&Math.hypot(other.x-v.x,other.z-v.z)<(v.t.L+other.t.L)*.55){if(other.ai)spawnAI(other);else{for(const e of roads){const p=lanePoint(e,Math.floor(e.points.length/2),1,e.width/2-1.7);if(this.clearFootprint(p,other.t)&&!cars.some(o=>o!==other&&Math.hypot(o.x-p.x,o.z-p.z)<8)){other.x=p.x;other.z=p.z;other.a=p.a;other.vx=other.vz=0;break;}}}}
-        camMode=car&&Number.isInteger(data.camera?.mode)?clamp(data.camera.mode,0,2):0;this.syncLights(v);
+        camMode=car&&Number.isInteger(data.camera?.mode)?clamp(data.camera.mode,0,3):0;if(camMode===3){pt=0;yo=0;}this.syncLights(v);
       }
       if(finite(data.camera?.zoom))zm=clamp(data.camera.zoom,.5,2.2);
       const a=data.activity,spec=activities[a?.kind];
       if(spec&&Array.isArray(a.targets)&&a.targets.length===spec.count&&a.targets.every(p=>this.clearFootprint(p,{L:.1,W:.1}))&&Number.isInteger(a.index)&&a.index>=0&&a.index<a.targets.length&&finite(a.elapsed)&&a.elapsed>=0&&a.elapsed<spec.limit){this.activity={kind:a.kind,targets:a.targets.map(p=>({x:p.x,z:p.z,a:p.a})),trace:Array.isArray(a.trace)?a.trace.filter(p=>finite(p.x)&&finite(p.z)&&p.x>=0&&p.z>=0&&p.x<=N*T&&p.z<=N*T).slice(0,1200):[],index:a.index,elapsed:a.elapsed,limit:spec.limit,hold:0};this.showTarget();}
-      ca=P.a;cp.set(P.x-Math.cos(P.a)*8,4,P.z-Math.sin(P.a)*8);this.lastSave=finite(data.savedAt)?data.savedAt:0;this.storageMessage='Your saved drive has been restored. Autosave is on.';
+      ca=P.a;cp.set(P.x-Math.cos(P.a)*8,4,P.z-Math.sin(P.a)*8);cam.position.copy(cp);cam.lookAt(P.x,1.5,P.z);this.lastSave=finite(data.savedAt)?data.savedAt:0;this.storageMessage='Your saved drive has been restored. Autosave is on.';
     }
   }
   gameplay=new DrivingGame();gameplay.init();

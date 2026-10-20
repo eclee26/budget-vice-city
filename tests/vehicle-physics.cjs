@@ -5,7 +5,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
-const source=html.slice(html.indexOf('const TY='),html.indexOf('const lit='))+html.slice(html.indexOf('const G9='),html.indexOf('function step()'));
+const source=fs.readFileSync(require('node:path').join(__dirname,'../vehicle-dynamics.js'),'utf8')+html.slice(html.indexOf('const TY='),html.indexOf('const lit='))+html.slice(html.indexOf('const G9='),html.indexOf('function step()'));
 function model(surface=1){
  const c=vm.createContext({Math,PI:Math.PI,R:()=>.5,tile:()=>surface,solid:()=>false,hurt:()=>{},sparks:()=>{},car:null,shake:0});
  vm.runInContext(source+';globalThis.types=TY;globalThis.tick=phys;',c);
@@ -71,7 +71,7 @@ test('forward, reverse and glancing wall impacts emit effects without stopping p
 });
 const clockSource=html.slice(html.indexOf('let simLast='),html.indexOf('(function loop(now='));
 function clock(){const c=model(),v=vehicle(c);let ticks=0;
- Object.assign(c,{performance:{now:()=>0},help:{open:false},document:{hidden:false},step:()=>{c.tick(v,1,0,0,false);ticks++},updParts:()=>{},ambient:()=>{},mini:()=>{}});
+ Object.assign(c,{gameplay:null,performance:{now:()=>0},help:{open:false},document:{hidden:false},step:()=>{c.tick(v,1,0,0,false);ticks++},updParts:()=>{},ambient:()=>{},mini:()=>{}});
  vm.runInContext(clockSource,c);return{c,v,count:()=>ticks};
 }
 test('30, 60 and 144 FPS produce identical 10-second driving results',()=>{
@@ -84,4 +84,48 @@ test('Help, hidden tabs and long frame gaps do not fast-forward the simulation',
  run.c.help.open=false;run.c.advanceSimulation(5000+1000/60);assert.equal(run.count(),2);
  run.c.document.hidden=true;run.c.advanceSimulation(20000);assert.equal(run.count(),2);
  run.c.document.hidden=false;run.c.advanceSimulation(30000);assert.ok(run.count()<=8);
+});
+
+test('rotated body contacts allow adjacent parked cars and detect actual overlap',()=>{
+ const c=model(),A=vehicle(c),B=vehicle(c);B.z=A.t.W+.12;
+ assert.equal(c.vehicleOverlap(A,B),null,'side-by-side cars must not collide as circles');
+ B.z=A.t.W-.1;assert.ok(c.vehicleOverlap(A,B));B.a=Math.PI/2;B.z=0;B.x=1;assert.ok(c.vehicleOverlap(A,B));
+});
+test('off-centre collisions conserve linear momentum and produce repeatable angular impulses',()=>{
+ const run=()=>{const c=model(),A=vehicle(c,15),B=vehicle(c);B.x=A.t.L-.15;B.z=.65;const momentum=A.t.m*A.vx+B.t.m*B.vx;
+  const impact=c.resolveVehicleContact(A,B);assert.ok(impact>0);assert.ok(Math.abs(A.t.m*A.vx+B.t.m*B.vx-momentum)<1e-7);assert.ok(Math.abs(A.yr)+Math.abs(B.yr)>.01);return[A.yr,B.yr,A.vx,B.vx];};
+ assert.deepEqual(run(),run());
+});
+test('fast vehicle pairs cannot pass through one another between ticks',()=>{
+ const c=model(),A=vehicle(c,400),B=vehicle(c,-400),pa={x:-4,z:0,a:0},pb={x:4,z:0,a:0};A.x=3;B.x=-3;
+ const impact=c.sweepVehiclePair(A,B,pa,pb);assert.ok(impact>0);assert.ok(A.x<B.x);assert.ok(A.vx<400&&B.vx>-400);
+});
+test('swept body collisions stop at thin walls and preserve glancing travel',()=>{
+ const c=model(),v=vehicle(c,150);v.vz=8;c.solid=(x)=>x>=v.t.L/2+.25&&x<v.t.L/2+.45;c.tick(v,0,0,0,false);
+ assert.ok(v.x<.26,'must not tunnel through a thin obstacle');assert.ok(v.vz>1,'must retain tangent velocity');assert.ok(Number.isFinite(v.yr));
+});
+test('four-wheel support samples split surfaces and responds physically to road steps',()=>{
+ const c=model(),v=vehicle(c,12);c.tile=(x,z)=>z>0?3:1;for(let i=0;i<60;i++)c.tick(v,.2,0,0,false);
+ assert.equal(v.contacts.length,4);assert.ok(v.contacts.some(w=>w.surface===1)&&v.contacts.some(w=>w.surface===3));assert.ok(v.contacts.every(w=>w.load>=0&&Number.isFinite(w.slip)));
+ const old=v.heave;c.roadHeight=()=>.12;for(let i=0;i<60;i++)c.tick(v,0,0,0,false);assert.ok(v.heave>old+.04);assert.ok(v.contacts.every(w=>Number.isFinite(w.compression)));
+});
+test('wheel inertia permits progressive wheelspin and follows reverse rotation',()=>{
+ const c=model(3),v=vehicle(c);for(let i=0;i<90;i++)c.tick(v,1,0,0,false);
+ assert.ok(v.contacts.some(w=>Math.abs(w.slip)>.05));assert.ok(v.contacts.some(w=>w.omega>0));
+ const r=vehicle(c);for(let i=0;i<120;i++)c.tick(r,0,1,0,false);assert.ok(r.contacts.some(w=>w.omega<0));
+});
+test('service brakes lock a wheel without driving it backwards',()=>{
+ const c=model(),wheel={omega:20,spin:0};for(let i=0;i<180;i++)c.wheelLongitudinal(wheel,8,0,.32,2500,1/180,9000);
+ assert.ok(wheel.omega>=0&&wheel.omega<.01);assert.ok(wheel.slip<-.9);
+});
+test('steering sensitivity adjusts the player response without changing traffic handling',()=>{
+ const run=(sensitivity,player)=>{const c=model(),v=vehicle(c,10);c.gameplay={settings:{steering:sensitivity}};c.car=player?v:null;c.tick(v,0,0,1,false);return v.st;};
+ assert.ok(run(1.5,true)>run(.5,true));assert.equal(run(1.5,false),run(.5,false));
+});
+test('settled parked cars skip tyre solves and wake after an impact or relocation',()=>{
+ const c=model(),v=vehicle(c);let calls=0;const original=c.wheelLongitudinal;c.wheelLongitudinal=(...args)=>{calls++;return original(...args)};
+ for(let i=0;i<180;i++)c.tick(v,0,0,0,true);const parkedCalls=calls;
+ for(let i=0;i<60;i++)c.tick(v,0,0,0,true);assert.equal(calls,parkedCalls);assert.equal(speed(v),0);
+ v.vx=2;c.tick(v,0,0,0,true);assert.ok(calls>parkedCalls&&v.x>0);
+ v.vx=v.vz=0;v.x+=10;const before=calls;c.tick(v,0,0,0,true);assert.ok(calls>before);
 });

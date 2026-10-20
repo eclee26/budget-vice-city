@@ -21,15 +21,6 @@
     {
       "category": "violation",
       "file": "index.html",
-      "line": 18,
-      "message": "Enabled literal button has no detectable action or submit behavior.",
-      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
-      "ruleId": "affordance.actionless-button",
-      "severity": "error"
-    },
-    {
-      "category": "violation",
-      "file": "index.html",
       "line": 19,
       "message": "Enabled literal button has no detectable action or submit behavior.",
       "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
@@ -39,7 +30,7 @@
     {
       "category": "violation",
       "file": "index.html",
-      "line": 21,
+      "line": 24,
       "message": "Enabled literal button has no detectable action or submit behavior.",
       "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
       "ruleId": "affordance.actionless-button",
@@ -48,7 +39,7 @@
     {
       "category": "violation",
       "file": "index.html",
-      "line": 21,
+      "line": 25,
       "message": "Enabled literal button has no detectable action or submit behavior.",
       "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
       "ruleId": "affordance.actionless-button",
@@ -57,7 +48,7 @@
     {
       "category": "violation",
       "file": "index.html",
-      "line": 21,
+      "line": 27,
       "message": "Enabled literal button has no detectable action or submit behavior.",
       "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
       "ruleId": "affordance.actionless-button",
@@ -66,7 +57,7 @@
     {
       "category": "violation",
       "file": "index.html",
-      "line": 21,
+      "line": 27,
       "message": "Enabled literal button has no detectable action or submit behavior.",
       "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
       "ruleId": "affordance.actionless-button",
@@ -75,7 +66,7 @@
     {
       "category": "violation",
       "file": "index.html",
-      "line": 21,
+      "line": 27,
       "message": "Enabled literal button has no detectable action or submit behavior.",
       "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
       "ruleId": "affordance.actionless-button",
@@ -84,7 +75,7 @@
     {
       "category": "violation",
       "file": "index.html",
-      "line": 21,
+      "line": 27,
       "message": "Enabled literal button has no detectable action or submit behavior.",
       "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
       "ruleId": "affordance.actionless-button",
@@ -93,7 +84,25 @@
     {
       "category": "violation",
       "file": "index.html",
-      "line": 22,
+      "line": 27,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "index.html",
+      "line": 27,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "index.html",
+      "line": 28,
       "message": "Enabled literal button has no detectable action or submit behavior.",
       "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
       "ruleId": "affordance.actionless-button",
@@ -101,13 +110,13 @@
     }
   ],
   "mode": "strict",
-  "projectRoot": "/workspace/budget-vice-city",
+  "projectRoot": "C:\\Users\\eldon\\OneDrive\\Desktop\\budget-vice-city",
   "schemaVersion": 1,
   "summary": {
-    "errors": 11,
-    "total": 11,
+    "errors": 12,
+    "total": 12,
     "unresolved": 0,
-    "violations": 11,
+    "violations": 12,
     "warnings": 0
   }
 }
