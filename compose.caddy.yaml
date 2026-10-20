@@ -1,0 +1,22 @@
+# Optional for a dedicated server with ports 80/443 available.
+# The default compose.yaml uses your existing host Nginx instead.
+services:
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      game:
+        condition: service_healthy
+    environment:
+      SITE_ADDRESS: "${SITE_ADDRESS:?Set SITE_ADDRESS to your domain}"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

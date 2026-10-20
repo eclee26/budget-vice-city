@@ -48,3 +48,6 @@ World-population settings are owned by `DrivingGame.settings/applyPopulation`: p
 
 
 Online play is owned by `CityMultiplayer` and same-origin `server.mjs`. Join is pending until the API responds; duplicate joins are blocked, invalid input stays editable, and failures re-enable Join with readable status. Copy invite uses the Clipboard API with a select/copy fallback. Room chat is public to room members, uses server-confirmed sends and preserves failed drafts. Global game hotkeys ignore editable targets and chat resets held controls. A polite chat log announces new text; historical replay is deduplicated. Reconnect is bounded/cancellable and stale actors hide. Leaving remains available during reconnect, ends presence and resumes single-player. Credentials remain in memory/authorization headers; invites contain only the room code. Hosting preparation does not imply a launched server.
+
+
+The map HUD is anchored lower left through the shared CSS map geometry variables. Heading stays inside its map and the Map button beside it. Chat stacks above this cluster. Touch layouts preserve thumbstick/pedal/action clearance; expanded mode remains bounded and can be closed from its own Map button.

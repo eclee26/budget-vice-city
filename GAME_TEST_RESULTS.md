@@ -106,3 +106,18 @@ The complete gameplay browser suite also passes with the new scripts: POV, 16 ve
 The strict UI audit retains the same 22 documented `affordance.actionless-button` programmatic-binding false positives, zero unresolved findings and no new rule types. The audit is not clean; raw evidence remains in `tests/ui-audit.json`.
 
 `render.yaml`, `Dockerfile` and `DEPLOYMENT.md` prepare a single Render web service, using same-origin HTTPS behind Render's TLS proxy and ephemeral in-memory rooms/chat. No public Render service has been launched. The local Node runtime is tested; the Docker container build was not run because Docker Desktop's Linux daemon is unavailable on this host. The 16-player limit is configured, not a 16-client load certification. NPCs, career systems and vehicle ownership remain local; remote players do not collide.
+
+
+## Lower-left map HUD
+
+The minimap, heading and Map button now share lower-left CSS anchors. Sound/Online stay upper right, and chat stacks above the map. Browser layout checks pass at 1440×900, 390×844, 320×740 and 844×390: map and heading remain in bounds, Map does not overlap the map, touch thumbstick/actions/pedals and chat clear the map cluster, and expand/collapse remains usable. Screenshots are `map-bottom-left-{width}x{height}.png` in `tests/artifacts`. The narrowest portrait map sits above the touch-action row; short landscape places it beside the left control column. No browser errors were reported. `git diff --check` passes. The strict UI audit retains the same 22 documented programmatic-button false positives and zero unresolved findings.
+
+
+## Ubuntu Docker Compose deployment
+
+Added `compose.yaml`, `Caddyfile` and `.env.example`: game health checks, startup dependency, automatic restart, internal game port, public HTTP/HTTPS proxy ports and persistent Caddy certificate volumes. `docker compose --env-file .env.example config --quiet` and `docker compose config --quiet` both pass, covering domain configuration and the default HTTP preview. `git diff --check` passes. No container image build/start is claimed: the local Docker Desktop Linux daemon is unavailable.
+
+
+## Shared Ubuntu server / existing Nginx
+
+The default Compose setup now runs only the game, publishing `127.0.0.1:${GAME_PORT:-18080}:8000`. It does not bind 80/443. Added `nginx/game.conf.example` with Host/client-IP forwarding and unbuffered long-lived multiplayer responses. Moved Caddy to the explicit `compose.caddy.yaml` override. Default Compose, `.env.example` and the combined optional Caddy configuration all pass `docker compose config --quiet`. Deployment documentation distinguishes host Nginx from a containerized proxy and leaves other app configurations untouched. No live Nginx validation or Docker container startup is claimed on this host.

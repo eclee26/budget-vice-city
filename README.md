@@ -187,3 +187,6 @@ Open **Menu → Settings → World population** to adjust **Pedestrians** (0–1
 Choose **Online**, enter a display name and room code, then **Join room**. Up to 16 players can explore the same city, see one another walking or driving, and use **T / Chat** to message everyone in the room. Copy the invite link from Online to bring friends into the same room. Leaving or losing the connection returns to single-player without losing local progress.
 
 Internet hosting is prepared for Render with `render.yaml` and `Dockerfile`. Follow [DEPLOYMENT.md](DEPLOYMENT.md) to deploy the Node web service and share its HTTPS address. A public service has not been deployed yet. NPC traffic, career activities and parked-car ownership are local; remote players/cars pass through each other.
+
+
+For your own Ubuntu server, run `docker compose up -d --build`. The default Compose setup runs only the game at `127.0.0.1:18080` for your existing host Nginx to proxy. The Nginx site example is `nginx/game.conf.example`; change `GAME_PORT` in `.env` if needed. Caddy is an optional dedicated-server override. See [DEPLOYMENT.md](DEPLOYMENT.md#ubuntu-with-docker-compose-and-existing-nginx) for setup and updates.
