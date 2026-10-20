@@ -1,0 +1,8 @@
+{
+  "name": "budget-vice-city",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {"node": ">=22"},
+  "scripts": {"start": "node server.mjs", "test:multiplayer": "node --test tests/multiplayer-server.test.mjs"}
+}

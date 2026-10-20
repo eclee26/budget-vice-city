@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: budget-vice-city
+    runtime: docker
+    plan: free
+    region: singapore
+    healthCheckPath: /healthz
+    numInstances: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "1"

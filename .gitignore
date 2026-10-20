@@ -1,0 +1,3 @@
+.test-tools/
+tests/artifacts/
+__pycache__/
