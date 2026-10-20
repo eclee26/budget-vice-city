@@ -1,0 +1,6 @@
+.git
+.test-tools
+tests
+references
+*.md
+.env*

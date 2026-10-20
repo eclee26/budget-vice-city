@@ -13,6 +13,8 @@ parser.add_argument('--only-pov', action='store_true')
 parser.add_argument('--only-headlights', action='store_true')
 parser.add_argument('--only-structures', action='store_true')
 parser.add_argument('--only-traffic', action='store_true')
+parser.add_argument('--only-exit', action='store_true')
+parser.add_argument('--only-signals', action='store_true')
 args=parser.parse_args()
 root=Path(__file__).resolve().parents[1]
 source=(root/'index.html').read_text(encoding='utf-8').replace('<script>\nconst T=10','<script>\nwindow.requestAnimationFrame=cb=>{window.nextFrame=cb;return 0};\nconst T=10')
@@ -24,7 +26,7 @@ def route(request):
     if url.hostname=='game.test':
         if url.path in ['/','/index.html']: request.fulfill(body=source,content_type='text/html')
         elif url.path=='/live.html': request.fulfill(body=(root/'index.html').read_text(encoding='utf-8'),content_type='text/html')
-        elif url.path in ['/gameplay.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']: request.fulfill(body=(root/url.path[1:]).read_text(encoding='utf-8'),content_type='text/css' if url.path.endswith('.css') else 'text/javascript')
+        elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']: request.fulfill(body=(root/url.path[1:]).read_text(encoding='utf-8'),content_type='text/css' if url.path.endswith('.css') else 'text/javascript')
         else: request.fulfill(status=204,body='')
     elif args.assets and (args.assets/Path(url.path).name).exists():
         request.fulfill(body=(args.assets/Path(url.path).name).read_text(encoding='utf-8'),content_type='text/javascript')
@@ -54,7 +56,7 @@ def run_desktop(context):
     page.keyboard.press('x');assert page.evaluate('car.ind===1')
     page.keyboard.press('v');assert page.evaluate('car.ind===2')
     page.keyboard.press('b');assert page.evaluate('gameplay.lastHorn>=0')
-    page.evaluate('''()=>{const old=Date.now;Date.now=()=>0;carFx(car);Date.now=old;if(!car.il.every(light=>light.visible))throw new Error('Hazards missing');}''')
+    page.evaluate('''()=>{carFx(car);if(!car.il.every(light=>light.visible))throw new Error('Hazards missing');}''')
     page.keyboard.press('h');assert page.evaluate('help.open')
     assert page.locator('#gp-activities').is_visible()
     page.locator('[data-pane="settings"]').click();page.locator('#quality-setting').select_option('low')
@@ -146,7 +148,7 @@ def run_improvements(context):
     assert page.locator('#game-boot').is_hidden()
     page.evaluate('''()=>{for(const v of cars)v.ai=null;const v=cars.find(v=>v.n==='Sedan');P.x=v.x-Math.sin(v.a)*4;P.z=v.z+Math.cos(v.a)*4;gameplay.hud();}''')
     assert page.locator('#interaction-prompt').is_visible()
-    assert page.evaluate('gameplay.highlight.visible')
+    assert page.evaluate("!S.children.some(o=>o.type==='BoxHelper')")
     page.locator('#interaction-prompt').click();steps(page,65);assert page.evaluate('!!car')
     # Map toggles on keyboard and button; Tab remains available to focus controls.
     page.keyboard.press('g');assert page.locator('#map-toggle').get_attribute('aria-expanded')=='true'
@@ -171,7 +173,7 @@ def run_improvements(context):
     page.evaluate('gameplay.save()');page.reload(wait_until='load');page.wait_for_function('gameplay!==null')
     assert page.evaluate("gameplay.settings.units==='mph'&&gameplay.settings.steering===1.25&&gameplay.settings.cameraSensitivity===1.5&&!gameplay.settings.blur&&!gameplay.settings.shake")
     render(page);page.screenshot(path=str(artifacts/'driving-improvements.png'));page.close()
-    print('PASS improvements: prompts/highlight, map, units, settings persistence, interpolation, recovery and instruments',flush=True)
+    print('PASS improvements: entry prompt without wireframe, map, units, settings persistence, interpolation, recovery and instruments',flush=True)
 
 def run_loading_failure(browser):
     context=browser.new_context();context.route('**/*',route)
@@ -247,7 +249,7 @@ def run_structures(context):
     page=load(context)
     summary=page.evaluate('''()=>{
       const lots=structurePlan.lots,houses=buildings.filter(b=>b.kind==='house2'),styles=new Set(houses.map(b=>b.variant%5));
-      if(lots.length!==7||styles.size!==5||houses.some(b=>b.height<6))throw Error('Missing civic lot or two-storey house variation');
+      if(lots.length!==9||styles.size!==5||houses.some(b=>b.height<6))throw Error('Missing civic lot or two-storey house variation');
       if(new Set(buildings.filter(b=>b.kind==='fuel').map(b=>b.brand)).size!==2)throw Error('Fuel brands missing');
       for(const lot of lots){
         for(let j=lot.j;j<lot.j+lot.nz;j++)for(let i=lot.i;i<lot.i+lot.nx;i++)if(mallTiles.has(i+','+j)||!structurePlan.tiles.has(i+','+j))throw Error('Lot reservation mismatch');
@@ -294,9 +296,87 @@ def run_traffic_signals(context):
     page.evaluate('''()=>{const e=roads.find(e=>e.width===10&&Math.abs(e.b.z-e.a.z)<1),p=lanePoint(e,Math.floor(e.points.length/2));P.x=p.x;P.z=p.z;positionSun(P.x,P.z);updateScenery();updateTrafficSignals();updateHud();cam.position.set(p.x-Math.cos(p.a)*18-Math.sin(p.a)*4.5,7,p.z-Math.sin(p.a)*18+Math.cos(p.a)*4.5);cam.lookAt(p.x+Math.cos(p.a)*20,0,p.z+Math.sin(p.a)*20);if(comp)comp.render();else r.render(S,cam);}''')
     page.screenshot(path=str(artifacts/'narrow-neighbourhood-road.png'));page.close();print('PASS signals and narrow roads',json.dumps(result),flush=True)
 
+def run_vehicle_signals(context):
+    page=load(context)
+    result=page.evaluate('''()=>{
+      const g=gameplay,check=(c,m)=>{if(!c)throw Error(m)};resetInput();
+      for(const v of cars){v.ai=null;v.policeActive=false;v.ind=0;v.vx=v.vz=v.yr=0;}
+      const selected=Object.keys(TY).map(name=>cars.find(v=>v.n===name)||mkCar(name));
+      let modes=0;
+      for(const v of selected){car=v;P.x=v.x;P.z=v.z;P.a=v.a;g.transition=null;v.ind=0;updateScenery();
+        check(v.il.length>0,'Indicator meshes missing: '+v.n);
+        for(let i=0;i<120;i++){trafficTick++;carFx(v);updateScenery();check(v.il.every(l=>!l.visible),'Off lamps revived by detail refresh: '+v.n);}
+        for(const mode of[-1,1,2]){
+          g.signal(mode);const start=trafficTick;
+          for(let tick=0;tick<108;tick++){trafficTick=start+tick;carFx(v);updateScenery();const on=tick%54<27;check(v.il.every(l=>l.visible===(on&&(mode===2||l.side_===mode))),'Blink cadence/side changed by LOD: '+v.n);}
+          g.signal(mode);check(v.ind===0&&v.il.every(l=>!l.visible),'Toggle off did not update lamps immediately: '+v.n);
+          for(let tick=0;tick<60;tick++){trafficTick++;carFx(v);updateScenery();check(v.il.every(l=>!l.visible),'Off state did not persist: '+v.n);}
+          modes++;
+        }
+        g.signal(2);const epoch=trafficTick;car=null;P.x=v.x+220;P.z=v.z+220;updateScenery();check(v.il.every(l=>!l.visible),'Hidden-body lamps remain visible');
+        car=v;P.x=v.x;P.z=v.z;updateScenery();check(trafficTick===epoch&&v.il.every(l=>l.visible),'Returning detail changed blink phase');g.signal(2);
+      }
+      return{models:selected.length,modes,cycleSeconds:.9,refreshCannotEnableOffLights:true};
+    }''')
+    page.keyboard.press('z');assert page.evaluate('car.ind===-1')
+    page.keyboard.press('z');assert page.evaluate('car.ind===0&&car.il.every(l=>!l.visible)')
+    page.keyboard.press('h');page.locator('[data-pane="vehicle"]').click()
+    page.locator('#signal-hazard').click();assert page.evaluate('car.ind===2&&car.il.every(l=>l.visible)')
+    page.locator('#signal-hazard').click();assert page.locator('#signal-hazard').get_attribute('aria-pressed')=='false'
+    assert page.evaluate('car.ind===0&&car.il.every(l=>!l.visible)')
+    page.evaluate('updateScenery()');assert page.evaluate('car.il.every(l=>!l.visible)')
+    page.locator('#signal-left').click()
+    pause=page.evaluate('({tick:trafficTick,lights:car.il.map(l=>l.visible)})')
+    page.evaluate('advanceSimulation(simLast+1000);carFx(car);updateScenery()')
+    assert page.evaluate('({tick:trafficTick,lights:car.il.map(l=>l.visible)})')==pause
+    page.locator('#signal-left').click();page.keyboard.press('Escape');steps(page,120)
+    assert page.evaluate('car.ind===0&&car.il.every(l=>!l.visible)')
+    page.close();print('PASS vehicle indicators: stable cadence, side selection, off/LOD, keyboard/menu and pause '+json.dumps(result),flush=True)
+
+def run_vehicle_exit(context):
+    page=load(context)
+    result=page.evaluate('''()=>{
+      const g=gameplay,check=(c,m)=>{if(!c)throw Error(m)};
+      resetInput();for(const v of cars){v.ai=null;v.policeActive=false;v.vx=v.vz=v.yr=0;}
+      const selected=['Sedan','Kaze R','Honda Civic FD 2009','Bike'].map(name=>cars.find(v=>v.n===name)||mkCar(name));
+      let point=null;
+      for(const e of roads)for(let i=30;i<e.points.length-30;i+=12){const p=lanePoint(e,i,1,0);if(g.clearFootprint({...p,a:0},{L:9,W:9})&&!cars.some(v=>Math.hypot(v.x-p.x,v.z-p.z)<14)){point=p;break;}if(point)break;}
+      check(!!point,'No clear vehicle-exit test location');let count=0;
+      for(const v of selected)for(const a of[0,Math.PI/2,Math.PI,-Math.PI/2]){
+        Object.assign(v,{x:point.x,z:point.z,a,vx:.1,vz:0,yr:0,g:1,thr:.7,brk:.6,hold:17,contacts:null});
+        car=v;P.x=v.x;P.z=v.z;P.a=v.a;P.o.visible=false;g.transition=null;
+        const x=v.x,z=v.z;g.act();check(g.transition?.exiting&&g.transition.point.side===-1,'Exit must select left side');
+        if(v.n!=='Bike')check(g.transition.door.position.z<0&&g.transition.door.position.x>0,'Wrong door');
+        let frames=0;while(g.transition&&frames++<70){k.s=1;step();check(Math.hypot(v.x-x,v.z-z)<1e-6,'Car moved during exit');check(v.g===1,'Exit selected reverse');}
+        check(!car&&!g.transition&&frames>=50,'Exit did not finish');resetInput();
+        const dx=P.x-v.x,dz=P.z-v.z,along=dx*Math.cos(a)+dz*Math.sin(a),lateral=-dx*Math.sin(a)+dz*Math.cos(a);
+        check(lateral<-v.t.W/2,'Player did not leave on the left');if(v.n!=='Bike')check(along>0,'Player did not leave through front door');
+        for(let i=0;i<60;i++)step();check(Math.hypot(v.x-x,v.z-z)<1e-6&&v.g===1,'Parked car creeps after exit');count++;
+        v.x=point.x+40+count*8;v.z=point.z;v.vx=v.vz=0;
+      }
+      const v=selected[0];Object.assign(v,{x:point.x,z:point.z,a:0,vx:0,vz:0,yr:0,g:-1,thr:.5,hold:17});car=v;P.x=v.x;P.z=v.z;g.act();
+      while(g.transition)step();for(let i=0;i<60;i++)step();check(v.g===-1&&Math.hypot(v.x-point.x,v.z-point.z)<1e-6,'Reverse gear exit creeps');
+      car=v;P.x=v.x;P.z=v.z;const left=g.exitPoint(v,-1,true),right=g.exitPoint(v,1,true);check(left&&right,'Blocked-door fixture requires two clear sides');
+      const original=structurePlan.solids;structurePlan.solids=new Map([...original].map(([key,list])=>[key,[...list]]));
+      try{structureCollider({x:left.x,z:left.z,angle:0,kind:'test-wall'},0,0,1.5,1.5);g.act();check(car===v&&!g.transition,'Blocked left door switched sides');check(document.getElementById('game-notice').textContent.includes('front-left'),'Blocked-door feedback missing');}
+      finally{structurePlan.solids=original;}
+      resetInput();g.act();for(let i=0;i<30;i++)step();check(g.transition?.door.rotation.y<0,'Left door must swing outward');
+      return{headingsAndModels:count,reverseExit:true,blockedLeft:true,maxPositionDrift:0};
+    }''')
+    render(page);page.screenshot(path=str(artifacts/'vehicle-front-left-exit.png'))
+    page.close();print('PASS front-left exit and stationary parking brake '+json.dumps(result),flush=True)
+
 with sync_playwright() as p:
     executable=os.environ.get('CHROMIUM_PATH') or shutil.which('chromium')
     browser=p.chromium.launch(**({'executable_path':executable} if executable else {}),headless=True,args=['--no-sandbox','--enable-unsafe-swiftshader'])
+    if args.only_signals:
+        signals=browser.new_context(viewport={'width':1100,'height':720});signals.route('**/*',route);run_vehicle_signals(signals)
+        assert not errors,errors
+        browser.close();print('PASS: no vehicle-indicator browser errors');raise SystemExit(0)
+    if args.only_exit:
+        exiting=browser.new_context(viewport={'width':1100,'height':720});exiting.route('**/*',route);run_vehicle_exit(exiting)
+        assert not errors,errors
+        browser.close();print('PASS: no vehicle-exit browser errors');raise SystemExit(0)
     if args.only_traffic:
         traffic=browser.new_context(viewport={'width':1100,'height':720});traffic.route('**/*',route);run_traffic_signals(traffic)
         assert not errors,errors
@@ -315,6 +395,8 @@ with sync_playwright() as p:
         mobile_pov=browser.new_context(viewport={'width':390,'height':844},has_touch=True,is_mobile=True,reduced_motion='reduce');mobile_pov.route('**/*',route);run_pov(mobile_pov)
         assert not errors,errors
         browser.close();print('PASS: no POV browser or shader errors');raise SystemExit(0)
+    exiting=browser.new_context(viewport={'width':1100,'height':720});exiting.route('**/*',route);run_vehicle_exit(exiting)
+    signals=browser.new_context(viewport={'width':1100,'height':720});signals.route('**/*',route);run_vehicle_signals(signals)
     desktop=browser.new_context(viewport={'width':1100,'height':720});desktop.route('**/*',route);run_desktop(desktop)
     improved=browser.new_context(viewport={'width':1100,'height':720});improved.route('**/*',route);run_improvements(improved)
     lighting=browser.new_context(viewport={'width':1100,'height':720});lighting.route('**/*',route);run_headlights(lighting)

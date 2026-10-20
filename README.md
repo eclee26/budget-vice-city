@@ -1,10 +1,10 @@
 # Budget Vice City
 
-A small open-world driving game that runs in the browser. It uses three.js with `index.html`, `vehicle-dynamics.js`, `structures.js`, `traffic-signals.js`, `world-detail.js`, `gameplay.js` and `driving.css`, with no runtime build step.
+A small open-world driving game that runs in the browser. It uses three.js with `index.html`, `vehicle-dynamics.js`, `structures.js`, `traffic-signals.js`, `world-detail.js`, `world-streaming.js`, `open-world.js`, `gameplay.js` and `driving.css`, with no runtime build step.
 
 ## Play
 
-Serve this folder with `python -m http.server 8000`, then open `http://localhost:8000`. Keep all six runtime files together. GitHub Pages can also serve the repository root; the current development branch is `work`.
+For single-player and multiplayer, run `npm start` with Node.js 22+, then open `http://localhost:8000`. A plain static server can still run single-player. Keep all runtime files together. GitHub Pages can also serve the repository root; the current development branch is `work`.
 
 ## Controls
 
@@ -25,10 +25,25 @@ Serve this folder with `python -m http.server 8000`, then open `http://localhost
 | Hazard lights | V |
 | Mute | M |
 | Enlarge / close map | G or Map button |
+| Use nearby city service | Q or service button |
+
+## Free roam, jobs and police
+
+Start with **$500**. Open **Menu → Activities** for paid jobs: parking ($250), delivery ($400), coastal sprint ($650), time trial ($800), or **Hot cargo ($1,800)**. Hot cargo dispatches police: collect three drops, then escape before the 200-second timer expires. Rewards are paid once on success. Close passes through traffic at speed award $25 once per civilian car per session.
+
+Crashes, pedestrian collisions and stealing occupied vehicles raise a five-level wanted meter. Up to three marked police sedans pursue using the road graph and physical steering/braking, with roof lights and a distance-faded synthesized siren. Police use building-obstructed sight within 90 m. Break sight and stay hidden for 23–43 simulation seconds. Nearby officers arrest you after five seconds below walking speed; keep moving to break capture. The minimap shows units and the last known search area. Pursuit timers pause with the menu.
+
+Hard vehicle impacts can injure you. Arrest costs up to $250 and respawns you near the station; zero health costs up to $150 and respawns you near the clinic. Both fail your job and leave the last car in the city. Recover it from the Vehicle menu. A short grace period prevents immediate repeat capture.
+
+Mark a destination in **Activities → City services**, follow its gold map marker, then stop at its cyan entrance ring. Press **Q** or the service button: Harbor Auto fully repairs your car for $150; the clinic restores health for $75; either fuel station repairs up to 35 damage for $40. Fuel consumption is not simulated. Services require no active job or pursuit, a stopped car where applicable, and enough cash. Healthy cars/players are not charged. Career progress uses the existing local save and cross-tab conflict handling; older saves receive the default career state.
+
+This remains a driving-focused procedural sandbox without firearm combat or building interiors. A numerical comparison with GTA V is subjective; these systems add a playable risk/reward loop without claiming AAA parity.
+
+Run `node tests/sandbox-browser.cjs` for career/pursuit/service checks and desktop/phone screenshots. It uses the Playwright driver under `.test-tools`; override `PLAYWRIGHT_DRIVER` and `CHROMIUM_PATH` for other installations. Evidence is written to `tests/artifacts/`.
 
 Touch devices get a left thumbstick for movement or steering, separate GAS and BRAKE pedals while driving, and buttons for entering/exiting a car, jumping/handbraking and changing the camera. Push the stick farther to run on foot. Steering, pedals and dragging the camera support simultaneous fingers. Hold BRAKE at a standstill to reverse.
 
-The driving HUD shows speed, gear, vehicle condition, an RPM bar and light/signal states. Speed defaults to km/h; switch to MPH in Settings. Nearby cars get a highlight and an entry prompt; blocked sides explain why entry is unavailable. The minimap includes a heading readout and can be enlarged with G or the Map button. An off-screen arrow points toward the active checkpoint. Open **Menu** (or press **H**) for activities, vehicle controls, graphics/progress settings and the full control list. The simulation, entry/exit animation and activity timer pause while the menu is open. Horn and headlight buttons also appear in the driving HUD. Entry/exit takes a short animated sequence; the car must be stopped and a side must be clear.
+The driving HUD shows speed, gear, vehicle condition, an RPM bar and light/signal states. Z toggles the left signal, X the right, and V the hazards; press the same key again to turn that mode off. Indicators use a steady 450 ms on / 450 ms off cycle. Speed defaults to km/h; switch to MPH in Settings. Nearby cars show an entry prompt; blocked sides explain why entry is unavailable. The minimap includes a heading readout and can be enlarged with G or the Map button. An off-screen arrow points toward the active checkpoint. Open **Menu** (or press **H**) for activities, vehicle controls, graphics/progress settings and the full control list. The simulation, entry/exit animation and activity timer pause while the menu is open. Horn and headlight buttons also appear in the driving HUD. Entry/exit takes a short animated sequence. Exits always use the front-left door; if it is blocked, move the car or use Recover vehicle. The car remains held by the parking brake throughout the animation.
 
 ## Features
 
@@ -141,3 +156,34 @@ Run `python tests/world-browser.py` for deterministic residential, downtown, coa
 The town now has four districts: coastal houses and shops, garden neighbourhoods, a concentrated downtown, and a southern harbor/service area. Eligible adjacent building tiles form wider blocks. Nine shared office/apartment/warehouse forms add setbacks, glass curtain walls, balconies, pilasters, podiums and loading doors. The coastline includes lifeguard towers, umbrellas and loungers, anchored sailboats, a detailed lighthouse gallery and bridge railings; streets include bus shelters and street-name signs. These are exterior scenery.
 
 Window interiors vary across four room designs and turn on individually at night. Signs render to their actual mesh aspect ratio; boardwalk planks use real-world dimensions. Foliage and grass use spatial instance batches so camera and shadow culling can skip unseen areas. The eleven-view world review also verifies district coverage, wider lot footprints, collision clearance and culling-bound containment.
+
+## Streamed city, parking and garden terrain
+
+`world-streaming.js` divides architecture and facade detail into 80 m cells. Low/Medium/High retain at most 6/9/12 detailed cells, respectively; simple skyline masses remain outside that range. New cells load in small batches during travel. Unloading releases their instance buffers while keeping shared meshes/materials and all collision data. Roads, the minimap, traffic paths and saves retain their existing ownership. No renderer or physics-engine migration was needed.
+
+Two public parking lots each have 14 marked bays, wheel stops, signs, billboards and three parked-car placements that preserve the central entrance and aisle. The minimap uses lowercase `p` for parking and uppercase `P` for the police station.
+
+Bayview Gardens and Palm Ridge Gardens have circular paths, open summit seating, ring planting and gentle 3.4 m / 2.6 m hills. Terrain height also feeds wheel supports, body slope, characters, vegetation and contact placement. All roads and civic driveways remain flat. The driving model is still a planar vehicle model with vertical wheel support, not a full 3D rollover simulation. Southern headlands are scenery outside the playable city boundary.
+
+Downtown includes occasional taller towers. Cars use merged opaque detail and simpler distant bodies; distant pedestrians and vegetation are hidden, and invisible wheel details skip interpolation. Day/night lighting, shadows, reflection presets and procedural PBR materials continue to use the established shared system.
+
+Additional checks: `python tests/streaming-browser.py` verifies loading/unloading, terrain support, parking capacity and stable GPU resource counts across repeated trips. `python tests/live-world-browser.py` records live frame-rate samples with the actual GPU, viewport and preset. Set `CHROMIUM_PATH` for an installed Chromium browser. Tests use `.test-tools/cdn-cache` when present and otherwise use the same CDN scripts as the game. Generated captures and JSON evidence are under `tests/artifacts/`. See `GAME_PLAN.md`, `GAME_SCORECARD.md`, `GAME_ITERATIONS.md` and `GAME_TEST_RESULTS.md` for scope, evidence and limitations.
+
+
+Sidewalks are now 3.2 m wide, with lamp posts near the outer edge. Desktop streets have 64 pedestrians, 24 moving traffic cars and extra curbside parking; mobile uses 48 pedestrians and 18 traffic cars. Most pedestrians stroll along sidewalk routes, with others wandering green space and the coast.
+
+
+Road surfaces now have layered asphalt grain, branching cracks, tar-sealed repairs, uneven fading, oil stains, chipped patches, curb grime and worn paint. A shared mipmapped material adds detail without extra road meshes or draw calls. Cracks and chipped areas are visual surface wear; driving collision remains smooth.
+
+
+Character proportions are calibrated to the vehicle dimensions: the player is 1.80 m tall and pedestrians range from 1.65–1.88 m. Cars appear about 18% larger relative to the player than with the former oversized character rig.
+
+
+Open **Menu → Settings → World population** to adjust **Pedestrians** (0–128) and **Traffic cars** (0–48). Changes apply immediately and save on this device. Traffic density controls moving ambient cars; parked cars and your claimed vehicle remain available. Higher populations increase processing cost.
+
+
+## Multiplayer and global chat
+
+Choose **Online**, enter a display name and room code, then **Join room**. Up to 16 players can explore the same city, see one another walking or driving, and use **T / Chat** to message everyone in the room. Copy the invite link from Online to bring friends into the same room. Leaving or losing the connection returns to single-player without losing local progress.
+
+Internet hosting is prepared for Render with `render.yaml` and `Dockerfile`. Follow [DEPLOYMENT.md](DEPLOYMENT.md) to deploy the Node web service and share its HTTPS address. A public service has not been deployed yet. NPC traffic, career activities and parked-car ownership are local; remote players/cars pass through each other.

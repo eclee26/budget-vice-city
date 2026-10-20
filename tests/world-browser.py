@@ -13,9 +13,13 @@ const T=10''')
 
 def route(request):
     url=urlparse(request.request.url)
-    if url.hostname!='game.test':request.continue_();return
+    if url.hostname!='game.test':
+        cached=root/'.test-tools'/'cdn-cache'/Path(url.path).name
+        if cached.exists():request.fulfill(body=cached.read_bytes(),content_type='text/javascript')
+        else:request.continue_()
+        return
     if url.path=='/':request.fulfill(body=source,content_type='text/html')
-    elif url.path in ['/gameplay.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']:
+    elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']:
         request.fulfill(body=(root/url.path[1:]).read_text(encoding='utf-8'),content_type='text/css' if url.path.endswith('.css') else 'text/javascript')
     else:request.fulfill(status=204,body='')
 
@@ -49,7 +53,7 @@ with sync_playwright() as p:
               return{b,p,score:(blocked?10000:0)+Math.abs(dist-21)};}).sort((a,b)=>a.score-b.score);b=ranked[0].b;street=ranked[0].p;
           }
           for(const v of cars)v.ai=null;car=null;P.o.visible=false;P.x=b.x;P.z=b.z;tod=time;
-          dayNight();positionSun(P.x,P.z);updateScenery();ambient(14);updateTrafficSignals();
+          dayNight();positionSun(P.x,P.z);updateScenery();worldStream.update(P.x,P.z,true);ambient(14);updateTrafficSignals();
           const c=Math.cos(b.angle),s=Math.sin(b.angle),distance=kind==='office'?22:kind==='fuel'?25:16;
           cam.position.set(b.x+s*distance+c*7,kind==='office'?6:3.2,b.z+c*distance-s*7);cam.lookAt(b.x,kind==='office'?10:2.7,b.z);cam.fov=58;cam.updateProjectionMatrix();
           if(kind==='coast'){cam.position.set(b.x-Math.cos(b.a)*14,4.5,b.z-Math.sin(b.a)*14);cam.lookAt(b.x+Math.cos(b.a)*20,1.5,b.z+Math.sin(b.a)*20)}

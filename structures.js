@@ -1,7 +1,7 @@
 /* Road-facing civic lots and shared, instanced neighbourhood architecture. */
 function planStructureLots(){
  const lots=[],tiles=new Set(),ground=new Map(),solids=new Map();
- const specs=[['fuel',0,3,2,160,200],['fuel',1,3,2,390,340],['police',0,2,2,275,220],['playground',0,2,2,150,350],['playground',1,2,2,350,120],['clinic',0,2,2,280,400],['workshop',0,2,2,390,260]];
+ const specs=[['fuel',0,3,2,160,200],['fuel',1,3,2,390,340],['police',0,2,2,275,220],['playground',0,2,2,150,350],['playground',1,2,2,350,120],['clinic',0,2,2,280,400],['workshop',0,2,2,390,260],['parking',0,3,2,185,390],['parking',1,3,2,350,70]];
  const nearest=(x,z)=>{let best=null,distance=Infinity;for(const road of roads)for(let k=0;k<road.points.length;k+=8){const p=road.points[k],d=Math.hypot(p.x-x,p.z-z);if(d<distance){distance=d;best=p;}}return{angle:Math.round(Math.atan2(best.x-x,best.z-z)/(PI/2))*PI/2,distance,point:best};};
  for(const[kind,variant,cw,cd,preferredX,preferredZ]of specs){let best=null,score=Infinity;
   for(let rotation=0;rotation<2;rotation++){const nx=rotation?cd:cw,nz=rotation?cw:cd;
@@ -36,11 +36,23 @@ function structureCollider(lot,x,z,w,d){
 function structureSolid(x,z){const list=structurePlan.solids.get(Math.floor(z/T)*N+Math.floor(x/T));if(list)for(const b of list)if(x>=b.minX&&x<=b.maxX&&z>=b.minZ&&z<=b.maxZ)return true;return false;}
 function structureGeometry(){return structureGeometry.cache||(structureGeometry.cache={pole:new THREE.CylinderGeometry(.5,.5,1,8),slide:new THREE.BoxGeometry(1,.075,3.3).rotateX(.43)});}
 function buildVariedStructure(kind,ctx){
- if(!['house2','fuel','police','playground','clinic','workshop'].includes(kind))return false;
+ if(!['house2','fuel','police','playground','clinic','workshop','parking'].includes(kind))return false;
  const{part,record,x,z,w,d,variant,angle,cream,trim,c,roof,houseRoof,warmWindow}=ctx,geo=structureGeometry(),lot={x,z,w,d,kind,angle};
  record.variant=variant;const block=(colour,sx,sy,sz,px,py,pz,collision=false,geometry)=>{part(colour,sx,sy,sz,px,py,pz,geometry);if(collision)structureCollider(lot,px,pz,sx,sz);};
  const window=(px,py,pz,ww=1.5,hh=1.3)=>{part(trim,ww+.18,hh+.18,.12,px,py,pz);part(warmWindow,ww,hh,.15,px,py,pz+.035);part(cream,.045,hh,.17,px,py,pz+.07);};
  const sign=(text,bg,fg,sx,sy,px,py,pz)=>part(buildingSign(text,bg,fg),sx,sy,.08,px,py,pz);
+ if(kind==='parking'){
+  record.name=variant?'Bayview Public Parking':'Harbor Visitor Parking';record.spaces=14;
+  const paint=mat('#d9d6bb');
+  for(const side of[-1,1])for(let i=0;i<8;i++){const px=-11.2+i*3.2;part(paint,.10,.018,4.9,px,.025,side*5.9);if(i<7){part('#b5b3a6',1.65,.10,.20,px+1.6,.07,side*8);}}
+  for(const side of[-1,1]){part(paint,22.4,.018,.10,0,.025,side*8.3);block('#7e8277',.16,3.7,.16,side*13.4,1.85,-8.4,true);part('#eee4bf',.65,.10,.55,side*13.4,3.72,-8.4);}
+  for(const side of[-1,1]){part(paint,1.6,.018,.10,side*3.4,.026,0);part(paint,.8,.018,.10,side*3.9,.026,side*.28);}
+  block('#3f514e',.12,2.7,.12,-13,1.35,8.1,true);sign('P   PUBLIC', '#314f54','#eee7d1',2.5,.8,-13,2.5,8.15);
+  // Advertising is placed at the back of its own reserved lot, off the road.
+  for(const px of[-4,4])block('#4c5753',.18,6,.18,px,3,-8.6,true);
+  part('#384946',10,.26,.35,0,6.4,-8.6);sign(variant?'THE MERIDIAN  /  BAYVIEW':'HARBOR FERRY  /  DAILY SAILINGS','#344b51','#eee5c9',9.6,2.5,0,5.05,-8.38);
+  part('#b2aa8e',10,.12,.40,0,3.72,-8.6);return true;
+ }
  if(kind==='house2'){
   const style=variant%5;record.style=['Gabled porch','Brick duplex','Balcony modern','Twin gable','Veranda terrace'][style];
   // The occupied tile already owns house collisions; all details stay within it.

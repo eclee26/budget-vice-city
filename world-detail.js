@@ -35,7 +35,7 @@ function buildCityArchitecture(kind,ctx){
   for(const side of[-1,1]){part(metal,.12,h,.12,side*(W/2-.18),h/2,front+.1);part(cream,.22,.3,.3,side*(W/2-.18),3.8,front+.15)}return true;
  }
  if(kind==='office'){
-  const floors=5+variant%4,h=floors*3.6,color=['#adb0aa','#839392','#a39787'][style];record.roofHeight=h;record.style=['Stepped glass office','Limestone civic tower','Brick city hotel'][style];
+  const floors=6+variant%5+(variant%7===0?9:0),h=floors*3.6,color=['#adb0aa','#839392','#a39787'][style];record.roofHeight=h;record.style=['Stepped glass office','Limestone civic tower','Brick city hotel'][style];
   // A wider podium and recessed upper floors replace repeated needle-like boxes.
   part(style===2?brick:stone,W,4,D,0,2,0);const upperW=W-(style===0?1.4:.6),upperD=D-.8,upperH=h-4;
   if(style===0)part(curtainWallMaterial(),upperW,upperH,upperD,0,4+upperH/2,-.15);
@@ -249,12 +249,12 @@ function buildWorldDetail(){
  const batches=new Map(),add=(geometry,material,x,y,z,sx,sy,sz,angle=0,shadow=true)=>{
   const sign=material.userData.sign;if(sign)material=buildingSign(sign.text,sign.bg,sign.fg,sx/sy);
   const spatial=geometry.userData.worldVegetation,cx=spatial?Math.floor(x/80)*80+40:0,cz=spatial?Math.floor(z/80)*80+40:0,key=geometry.uuid+material.uuid+(spatial?':'+cx+','+cz:'');let b=batches.get(key);if(!b){b={geometry,material,shadow,spatial,cx,cz,matrices:[]};batches.set(key,b)}
-  b.matrices.push(new THREE.Matrix4().compose(new THREE.Vector3(x-cx,y,z-cz),new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),angle),new THREE.Vector3(sx,sy,sz)));
+  b.matrices.push(new THREE.Matrix4().compose(new THREE.Vector3(x-cx,y+worldElevation(x,z),z-cz),new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),angle),new THREE.Vector3(sx,sy,sz)));
  };
  const foliage=foliageCluster(),canopy=foliage.geometry;canopy.userData.worldVegetation=true;
  const leaves=['#48633c','#607747','#3f6650'].map(c=>new THREE.MeshStandardMaterial({map:foliage.map,alphaTest:.4,side:THREE.DoubleSide,color:lin(c),vertexColors:true,roughness:.94,envMapIntensity:.22}));
  const bark=surfaceFinish(new THREE.MeshStandardMaterial({color:lin('#645447'),roughness:1}),'bark'),trunk=new THREE.CylinderGeometry(.13,.24,1,7);
- const safe=(x,z,radius)=>tile(x,z)===0&&!structurePlan.tiles.has(Math.floor(x/T)+','+Math.floor(z/T))&&[-1,0,1].every(a=>[-1,0,1].every(b=>!inMask(clearanceMask,x+a*radius,z+b*radius)&&tile(x+a*radius,z+b*radius)===0));
+ const safe=(x,z,radius)=>tile(x,z)===0&&!(radius>1&&gardenHills.features.some(h=>Math.hypot(x-h.x,z-h.z)<23))&&!structurePlan.tiles.has(Math.floor(x/T)+','+Math.floor(z/T))&&[-1,0,1].every(a=>[-1,0,1].every(b=>!inMask(clearanceMask,x+a*radius,z+b*radius)&&tile(x+a*radius,z+b*radius)===0));
  for(let z=14;z<N*T-10;z+=9)for(let x=106;x<N*T-10;x+=9){const px=x+(random()-.5)*5,pz=z+(random()-.5)*5;if(random()>.52||!safe(px,pz,3.1)||palms.some(p=>Math.hypot(px-p[0],pz-p[1])<5))continue;
   const h=4+random()*3,size=1.65+random()*.8,leaf=leaves[stats.trees%3];stats.trees++;
   structureCollider({x:px,z:pz,angle:0,kind:'tree'},0,0,.42,.42);
@@ -271,6 +271,13 @@ function buildWorldDetail(){
   add(trunk,bark,x,h*.42,z,.85,h*.84,.85);structureCollider({x,z,angle:0,kind:'tree'},0,0,.38,.38);
   for(let j=0;j<3;j++){const a=j*2.1;add(canopy,leaf,x+Math.cos(a)*.65,h+j*.16,z+Math.sin(a)*.65,1.55,1.8,1.55,a)}
  }}
+ // Garden trees form a deliberate ring around the open hill and its seating.
+ for(const hill of gardenHills.features)for(let i=0;i<8;i++){
+  const a=i*PI/4+.2,x=hill.x+Math.cos(a)*15,z=hill.z+Math.sin(a)*15,h=4.8;
+  add(trunk,bark,x,h*.44,z,.9,h*.88,.9);structureCollider({x,z,angle:0,kind:'garden-tree'},0,0,.42,.42);
+  for(let k=0;k<3;k++)add(canopy,leaves[i%3],x+Math.cos(k*2.1)*.55,h+k*.15,z+Math.sin(k*2.1)*.55,1.5,1.8,1.5,k);
+  stats.trees++;
+ }
  // Low shrubs and grass stay in non-drivable planted ground, clear of civic access.
  const grassGeo=new THREE.BufferGeometry(),gp=[];
  for(let i=0;i<7;i++){const a=i*2.399,w=.035,h=.23+(i%3)*.095,x=Math.sin(a)*.16,z=Math.cos(a)*.16;gp.push(x-w,0,z,x+w,0,z,x+Math.sin(a)*.13,h,z+Math.cos(a)*.12)}
@@ -320,9 +327,11 @@ function buildWorldDetail(){
  const foam=new THREE.MeshStandardMaterial({color:lin('#cee3da'),transparent:true,opacity:.28,roughness:1,depthWrite:false});
  for(let j=0;j<N;j++)for(let i=0;i<N;i++)if(m[j][i]===3){for(const [di,dj]of[[1,0],[-1,0],[0,1],[0,-1]])if(m[j+dj]?.[i+di]===4){const x=(i+.5)*T+di*T*.49,z=(j+.5)*T+dj*T*.49;for(let k=0;k<3;k++){const dx=dj*(k-1)*3.2,dz=di*(k-1)*3.2;add(flatDetail,foam,x+dx,.005,z+dz,dj?2.9:.16,1,di?2.9:.16,0,false);stats.shore++}}}
  Object.assign(stats,enrichCityWorld(add));
+ Object.assign(stats,buildGardenLandmarks(add));
  const spatialGeometry=new Map();
  for(const b of batches.values()){if(!b.matrices.length)continue;let geometry=b.geometry;
   if(b.spatial){if(!spatialGeometry.has(geometry.uuid)){const clone=geometry.clone();clone.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,8,0),70);spatialGeometry.set(geometry.uuid,clone)}geometry=spatialGeometry.get(geometry.uuid)}
+  if(!b.spatial&&b.material!==contact){worldStream.register(geometry,b.material,b.matrices,b.shadow,!b.material.transparent);continue;}
   const mesh=new THREE.InstancedMesh(geometry,b.material,b.matrices.length);b.matrices.forEach((m,i)=>mesh.setMatrixAt(i,m));mesh.castShadow=b.shadow;mesh.receiveShadow=!b.material.transparent;
   if(b.spatial){mesh.position.set(b.cx,0,b.cz);mesh.frustumCulled=true;mesh.userData.worldVegetation=true}
   if(b.material===contact)mesh.renderOrder=-4;S.add(mesh)}

@@ -74,7 +74,7 @@ function roadHeight(x,z){
   const edge=[[-.25,0],[.25,0],[0,-.25],[0,.25]].some(([dx,dz])=>inMask(asphaltMask,x+dx,z+dz));return edge?.10:.004;
  }
  if(surface===5)return .12+.004*Math.sin(x*6);
- if(surface===0)return .025+.018*Math.sin(x*1.4)*Math.sin(z*1.1);
+ if(surface===0)return .025+.018*Math.sin(x*1.4)*Math.sin(z*1.1)+(typeof worldElevation==='function'?worldElevation(x,z):0);
  if(surface===3)return .012+.012*Math.sin(x*.8)*Math.sin(z*.7);return 0;
 }
 function supportWheels(v,h){

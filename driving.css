@@ -1,4 +1,12 @@
 /* Instruments extend the existing warm-white / cyan coastal HUD tokens. */
+#sandbox-hud{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.sandbox-wallet{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:10px;color:var(--muted)}.sandbox-wallet strong{color:var(--accent);font:700 19px ui-monospace,monospace;letter-spacing:-.04em}
+.sandbox-vitals{display:flex;align-items:center;gap:7px;font-size:9px;margin-top:8px;color:var(--muted)}#health-bar{width:100%;min-width:20px;height:4px;accent-color:var(--accent)}#health-value{min-width:20px;text-align:right}
+#wanted-stars{color:var(--warning);font-size:23px;letter-spacing:3px;text-shadow:0 1px 3px #000}#pursuit-status{font:700 10px ui-monospace,monospace;line-height:1.5;color:var(--warning);margin:3px 0 5px}#escape-bar{width:100%;height:4px;accent-color:var(--warning)}
+#sandbox-tip{font-size:10px;color:var(--muted);line-height:1.5;margin:7px 0 0}#service-action{pointer-events:auto;width:100%;min-height:44px;margin-top:9px;background:transparent;border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-size:11px}#service-action:hover{background:#ffffff15}
+.sandbox-menu{border-top:1px solid var(--line);margin-top:20px;padding-top:20px}.sandbox-menu h3{font-size:14px}#career-stats{color:var(--accent);font-variant-numeric:tabular-nums}
+@media(max-width:600px){#sandbox-hud{margin-top:8px;padding-top:7px}.sandbox-wallet strong{font-size:16px}#sandbox-tip{display:none}#wanted-stars{font-size:19px;letter-spacing:2px}#pursuit-status{font-size:9px}#engine-status{display:none}.speed-value{font-size:36px}.speed-row{margin:5px 0 8px}#vehicle-signals{min-height:0;font-size:9px;padding-top:4px}.gp-quick{margin-top:6px!important}.sandbox-vitals{margin-top:5px}#service-action{margin-top:5px}#health-value{min-width:17px}}
+@media(max-height:500px) and (orientation:landscape){#sandbox-hud{margin-top:6px;padding-top:5px}#sandbox-tip,.sandbox-vitals{display:none}.sandbox-wallet strong{font-size:15px}#wanted-stars{font-size:17px}#pursuit-status{font-size:9px}}
 #rpm-bar{width:100%;height:5px;margin-top:7px;accent-color:var(--accent)}
 #rpm-bar[data-redline=true]{accent-color:var(--warning)}
 #vehicle-signals{min-height:26px;padding-top:7px;font-size:10px;line-height:1.6;color:var(--muted)}
