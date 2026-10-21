@@ -103,3 +103,12 @@ The new `--only-exit` browser regression passes 16 model/heading combinations, a
 Root cause: full-detail car restoration set every cached child visible, including all four indicator meshes, every six ticks. This overrode signals-off and one-sided signals, producing repeated flashes at the detail-update rate. Full-detail restoration now excludes indicator meshes. A shared visibility controller owns side selection and a 54-tick cycle (450 ms on, 450 ms off) using simulation time; input toggles update meshes immediately, including while paused. No wall-clock timing remains in the indicator effect.
 
 The dedicated browser regression passes all eight models and 24 mode/model combinations, repeated forced detail refreshes, hidden/visible body changes, immediate off, real keyboard/menu actions and paused phase behavior. No browser errors were reported.
+
+
+## 2026-10-22 — Last Light and 1999 Civic Si
+
+Added a connected authored mission: meet Inez, choose a careful/urgent run, collect and carry a controller, load a stopped eligible car, drive it to the clinic, unload and hand it to Dr. Vale. Cargo condition and deadline affect the first-completion payment. Serious pursuit, loss/damage, recovery, incapacitation and cancellation end the run without a reward; completed replays pay nothing. Existing services/jobs cannot conflict with the run. Named actors and props reuse their resources. Physical carrying slows movement and extends clearance; hands reach the case handle.
+
+Imported the user-supplied blue 1999 Honda Civic Si without modifying the GLB. Normalize its axes and metre scale, animate four separate wheel assemblies and the source steering wheel, use its cockpit in first-person views, partition original door surfaces, calibrate lamp origins, retain save/multiplayer identity and provide a Vehicle-menu map locator. The model remains separate from the existing 1997 SiR. Added an optional-asset decode fallback and bounded loading, local loader/license files, attribution links and Docker asset packaging. Existing deterministic fixtures now poll readiness independently of their disabled animation loop.
+
+The overall subjective score remains 5.3/10. The visible car asset is substantially more detailed, but the rest of the world, character animation and mission staging still have major gaps.

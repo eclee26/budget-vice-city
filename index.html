@@ -934,7 +934,7 @@ function updateHeadlights(){
  const pose=car.o,t=car.t,level=(gameplay?gameplay.lightLevel(car):night),height=car.n==='Bike'?.9:car.n==='Van'?1.05:.78;
  headlightForward.set(1,0,0).applyQuaternion(pose.quaternion);const length=Math.hypot(headlightForward.x,headlightForward.z)||1,fx=headlightForward.x/length,fz=headlightForward.z/length;
  for(const light of headlights){const side=light.userData.side;
-  headlightMount.set(t.L/2+.03,height,side*t.W*.34).applyQuaternion(pose.quaternion).add(pose.position);light.position.copy(headlightMount);
+  const importedLamp=car.importedView?.lamps.find(p=>Math.sign(p.z)===side);if(importedLamp)headlightMount.copy(importedLamp);else headlightMount.set(t.L/2+.03,height,side*t.W*.34);headlightMount.applyQuaternion(pose.quaternion).add(pose.position);light.position.copy(headlightMount);
   const x=headlightMount.x+fx*5,z=headlightMount.z+fz*5,y=Math.max(.012,roadHeight(x,z)+.008);light.target.position.set(x,y,z);
   // The shader uses a world-level cutoff, independent of chassis pitch or camera roll.
   light.intensity=level*HEADLIGHT_BEAM.intensity;

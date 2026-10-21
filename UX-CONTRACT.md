@@ -67,3 +67,9 @@ Loading stays visible through registered city-material preparation. Readiness fo
 ## Character appearance and calibration
 
 `character-art.js` owns shared shaped surfaces, clothing-surface helpers and palette-tone caches. `mkHuman` retains the 2.02 m neutral rig envelope and calibrated joint lengths; the player, ambient residents, passengers and remote avatars share this representation. Ambient variants choose three body builds, five hairstyles and four garments from the existing deterministic appearance draws. Visual styling does not add new input requirements. Standing body radius scales with build/height and feeds pedestrian spacing, spawn clearance, vehicle avoidance/contact and recovery. Palette roles preserve shaded collars/seams and update by material reassignment; global shared colors are not mutated. Passenger actor/label reuse, seating/floor calibration and saved progress retain their existing ownership. Crowd batches include every shared geometry family and continue copying the live joint transforms/colors.
+
+
+| New capability | Canonical owner | Observable contract |
+| --- | --- | --- |
+| Last Light story | `StoryMission` / `LastLightState` | Story tab shares the paused modal. Q/touch uses the same nearby on-foot interaction; ordered collect/load/drive/unload/handoff objectives cannot skip stages. A stopped eligible car is booked for cargo. Condition/time, failure, retry and first-completion-only payment persist locally. Existing activities/services cannot overlap the mission. |
+| Imported Civic | `ImportedCivic` / `DrivingGame` | GLB loads before game readiness; a failed optional asset leaves a simplified car playable. Existing vehicle entry/exit/driving/save/camera controls apply. Source cockpit replaces the generic cockpit in interior views. Find 1999 Civic Si marks the car's location and resumes play. Vehicle menu preserves source attribution and license links. |

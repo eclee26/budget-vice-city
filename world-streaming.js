@@ -137,7 +137,7 @@ function optimizeVehicleRendering(v) {
     for(const wheel of v.wheels)fdBatchGroup(v,wheel.spin,'vehicle:'+v.n+':wheel:'+Math.sign(wheel.steer.position.z));
     fdBatchGroup(v,v.o,'vehicle:'+v.n+':body');
   }
-  const paint=v.o.children.find(o=>o.isMesh&&o.material.isMeshPhysicalMaterial&&o.material!==GLASS&&o.material!==civicGlass)?.material||carMat('#a3a7aa'),t=v.t;
+  const paint=v.importedView?.paint||v.o.children.find(o=>o.isMesh&&o.material.isMeshPhysicalMaterial&&o.material!==GLASS&&o.material!==civicGlass)?.material||carMat('#a3a7aa'),t=v.t;
   const group=new THREE.Group();bx(paint,t.L,.62,t.W,0,.64,0,group);
   if(v.n!=='Bike')bx(GLASS,t.L*.47,v.n==='Van'?1.3:.46,t.W*.81,-.24,v.n==='Van'?1.5:1.17,0,group);
   bx(headMat,.06,.12,t.W*.72,t.L/2,.79,0,group);bx(v.tm,.06,.12,t.W*.72,-t.L/2,.8,0,group);

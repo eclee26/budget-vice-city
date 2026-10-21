@@ -32,7 +32,7 @@ const ImportedCivic={
       });
       // Keep one canonical, world-space geometry per part; release source buffers.
       const disposed=new Set();root.traverse(m=>{if(!m.isMesh)return;if(!disposed.has(m.geometry)){disposed.add(m.geometry);m.geometry.dispose();}if(!disposed.has(m.material)){disposed.add(m.material);m.material.dispose();}});
-      this.stage='loaded';this.bounds={length:4.45,width:size.x*scale,height:size.y*scale};return true;
+      this.lamps=this.parts.filter(p=>/_glass[LR]HL_detail_glass_clear_/.test(p.name)).map(p=>new THREE.Vector3(p.geometry.boundingBox.max.x+.025,p.center.y,p.center.z));this.stage='loaded';this.bounds={length:4.45,width:size.x*scale,height:size.y*scale};return true;
     }).catch(error=>{this.parts=null;this.error=String(error.message||error);return false;});
     return this.promise;
   },
@@ -55,7 +55,7 @@ const ImportedCivic={
     }
     // Retain the common physical-light and indicator owners.
     for(const side of[-1,1])for(const front of[true,false]){const lamp=bx(ambMat,.045,.055,.13,(front?1:-1)*(v.t.L/2-.07),front?.66:.64,side*.69,v.o);lamp.side_=side;lamp.visible=false;lamp.castShadow=false;v.il.push(lamp);}
-    v.importedView={steering,paint:this.parts.find(p=>p.material.name==='CarPaint')?.material};optimizeVehicleRendering(v);prepareVehicleDoors(v);v.detailsNear=true;this.stage='attached';
+    v.importedView={steering,lamps:this.lamps,paint:this.parts.find(p=>p.material.name==='CarPaint')?.material};optimizeVehicleRendering(v);prepareVehicleDoors(v);v.detailsNear=true;this.stage='attached';
   },
   animate(v){if(v.importedView)v.importedView.steering.rotation.x=-v.st*9;}
 };

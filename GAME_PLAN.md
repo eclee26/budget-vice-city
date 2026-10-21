@@ -57,3 +57,10 @@ Initial residents use clear nearby sidewalk/green-space sites. Replenishment reu
 ## Character surface/wardrobe pass — 2026-10-21
 
 Shared profiled body/limb surfaces, sculpted heads, a parametric hairline, rounded footwear and fitted garment details replace the simplest primitives. Ambient variants combine three builds, five hairstyles and four garment types without extra random draws affecting the existing appearance stream. Explicit palette roles recolor shaded clothing details and skin/hair consistently while keeping other actors’ materials unchanged. Standing radii scale with body width; spawn, avoidance, contact and recovery use those radii. Sixty shape/style combinations retain height/ground clearance and a fixed geometry vocabulary; passenger seating and existing gameplay retain their controls. Visual review corrected oversized collars/shoulders and a disconnected hairline before acceptance. The current art is more varied but remains plainly stylized; the provisional overall 5.3/10 assessment stays unchanged.
+
+
+## Last Light and imported Civic — 2026-10-22
+
+Last Light adds a named workshop contact, two deadline/payment choices, a physical controller carried on foot and loaded into a parked car, condition-sensitive driving, and a clinic entrance handoff. It saves connected stages and rejects conflicting jobs; first completion pays once and replays do not pay again. The controlled browser journey uses real Q interactions, entry/exit and a short throttle segment, with stage positioning controlled by the fixture. This is one small chapter, not a full campaign or an end-to-end human city playthrough.
+
+The user-supplied 1999 Civic Si GLB is now a separate drivable model, with source cockpit, wheel/steering pivots, game door partitions, lamp positions, saved identity and a menu map locator. Its detailed geometry is excluded from random traffic and gets a distant rendering proxy. Keep the embedded noncommercial attribution/share-alike terms with the model. Next work should improve character animation, believable mission staging and environmental artwork; one imported car does not bring the overall game to the requested 8/10.

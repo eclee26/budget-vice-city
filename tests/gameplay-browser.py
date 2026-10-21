@@ -66,7 +66,7 @@ def run_desktop(context):
     assert page.evaluate('gameplay.settings.resolution===60&&Math.abs(r.getPixelRatio()-.54)<.00001')
     page.locator('#fps-setting').check();page.evaluate('gameplay.frame(10000);gameplay.frame(10750)');assert page.locator('#fps-counter').is_visible()
     page.locator('#quality-setting').select_option('high');page.locator('#resolution-setting').fill('100');page.locator('#resolution-setting').dispatch_event('change')
-    assert page.evaluate('r.shadowMap.enabled&&sun.shadow.mapSize.x===2048&&Math.abs(aa.uniforms.inverseResolution.value.x-1/(innerWidth*r.getPixelRatio()))<1e-10'),page.evaluate('({shadow:r.shadowMap.enabled,size:sun.shadow.mapSize.x,aa:aa.uniforms.inverseResolution.value.x,expected:1/(innerWidth*r.getPixelRatio()),mobile:graphics.mobile,quality:gameplay.settings.quality,resolution:gameplay.settings.resolution})')
+    assert page.evaluate('r.shadowMap.enabled&&sun.shadow.mapSize.x===(graphics.mobile?1024:2048)&&Math.abs(aa.uniforms.inverseResolution.value.x-1/(innerWidth*r.getPixelRatio()))<1e-10'),page.evaluate('({shadow:r.shadowMap.enabled,size:sun.shadow.mapSize.x,aa:aa.uniforms.inverseResolution.value.x,expected:1/(innerWidth*r.getPixelRatio()),mobile:graphics.mobile,quality:gameplay.settings.quality,resolution:gameplay.settings.resolution})')
     render(page);page.screenshot(path=str(artifacts/'gameplay-settings.png'))
     page.locator('[data-pane="activities"]').click();page.locator('[data-activity="race"]').click();assert page.evaluate("!help.open&&gameplay.activity.kind==='race'")
     # Menu/hidden time never consumes a challenge timer.
@@ -180,6 +180,7 @@ def run_loading_failure(browser):
     context=browser.new_context();context.route('**/*',route)
     context.route('**/three.min.js',lambda request: request.abort())
     page=context.new_page();page.goto('https://game.test/',wait_until='load')
+    page.wait_for_function('gameBoot.failed',polling=50,timeout=60000)
     assert page.locator('#boot-retry').is_visible()
     assert 'could not start' in page.locator('#boot-title').inner_text()
     context.close();print('PASS loading failure: readable graphics error and retry action',flush=True)
@@ -190,6 +191,7 @@ def run_loading_failure(browser):
     assert broken!=original,'Material-preparation failure hook missing'
     context.route('**/gameplay.js',lambda request:request.fulfill(body=broken,content_type='text/javascript'))
     page=context.new_page();page.goto('https://game.test/',wait_until='load')
+    page.wait_for_function('gameBoot.failed',polling=50,timeout=60000)
     assert page.locator('#boot-retry').is_visible()
     assert page.evaluate('gameBoot.failed&&!gameBoot.done')
     context.close();print('PASS preparation failure: loading remains failed with Retry available',flush=True)
