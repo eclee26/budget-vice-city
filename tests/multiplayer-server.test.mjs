@@ -10,6 +10,9 @@ test('room membership, authenticated state, global chat, isolation and bounded i
   const stream=async token=>{const c=new AbortController();controllers.push(c);const r=await fetch(base+'/api/events',{headers:{Authorization:'Bearer '+token},signal:c.signal});assert.equal(r.status,200);const reader=r.body.getReader(),decoder=new TextDecoder();let buffer='';return async event=>{const deadline=Date.now()+3000;while(Date.now()<deadline){let end;while((end=buffer.indexOf('\n\n'))>=0){const block=buffer.slice(0,end);buffer=buffer.slice(end+2);if(block.startsWith('event: '+event+'\n'))return JSON.parse(block.split('\ndata: ')[1]);}const part=await reader.read();assert.equal(part.done,false);buffer+=decoder.decode(part.value);}throw Error('Stream event timed out');};};
   try {
     assert.equal((await fetch(base+'/healthz')).status,200);
+    const doors=await fetch(base+'/vehicle-doors.js');assert.equal(doors.status,200);assert.match(await doors.text(),/function setVehicleDoor/);
+    const pedestrians=await fetch(base+'/pedestrian-ai.js');assert.equal(pedestrians.status,200);assert.match(await pedestrians.text(),/class AmbientPedestrians/);
+    const crowd=await fetch(base+'/pedestrian-crowd.js');assert.equal(crowd.status,200);assert.match(await crowd.text(),/class PedestrianCrowd/);
     for(const path of ['/.git/config','/.env','/server.mjs','/tests/multiplayer-server.test.mjs'])assert.equal((await fetch(base+path)).status,404);
     assert.equal((await post('/api/join',{name:'x',room:'TEST',world:'old'})).status,400);
     assert.equal((await post('/api/join',{name:'x',room:'TEST',world:WORLD_ID},null,{Origin:'https://other.example'})).status,403);

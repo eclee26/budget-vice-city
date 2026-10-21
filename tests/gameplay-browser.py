@@ -26,7 +26,7 @@ def route(request):
     if url.hostname=='game.test':
         if url.path in ['/','/index.html']: request.fulfill(body=source,content_type='text/html')
         elif url.path=='/live.html': request.fulfill(body=(root/'index.html').read_text(encoding='utf-8'),content_type='text/html')
-        elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']: request.fulfill(body=(root/url.path[1:]).read_text(encoding='utf-8'),content_type='text/css' if url.path.endswith('.css') else 'text/javascript')
+        elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/pedestrian-crowd.js','/pedestrian-ai.js','/vehicle-doors.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']: request.fulfill(body=(root/url.path[1:]).read_text(encoding='utf-8'),content_type='text/css' if url.path.endswith('.css') else 'text/javascript')
         else: request.fulfill(status=204,body='')
     elif args.assets and (args.assets/Path(url.path).name).exists():
         request.fulfill(body=(args.assets/Path(url.path).name).read_text(encoding='utf-8'),content_type='text/javascript')
@@ -60,7 +60,7 @@ def run_desktop(context):
     page.keyboard.press('h');assert page.evaluate('help.open')
     assert page.locator('#gp-activities').is_visible()
     page.locator('[data-pane="settings"]').click();page.locator('#quality-setting').select_option('low')
-    assert page.evaluate('!r.shadowMap.enabled&&graphics.detailRange===55')
+    assert page.evaluate('!sun.shadow.autoUpdate&&sun.shadow.map===null&&graphics.detailRange===55')
     page.locator('#resolution-setting').fill('60');page.locator('#resolution-setting').dispatch_event('change')
     assert page.evaluate('gameplay.settings.resolution===60&&Math.abs(r.getPixelRatio()-.54)<.00001')
     page.locator('#fps-setting').check();page.evaluate('gameplay.frame(10000);gameplay.frame(10750)');assert page.locator('#fps-counter').is_visible()
@@ -124,7 +124,7 @@ def run_mobile(context):
     page.locator('#enter-control').tap();steps(page,65);assert page.evaluate('!!car')
     page.locator('#horn-control').tap();page.locator('#lights-control').tap();assert page.evaluate("car.lightsMode==='on'")
     page.locator('#help-open').tap();page.locator('[data-pane="settings"]').tap();page.locator('#quality-setting').select_option('low')
-    assert page.evaluate('graphics.detailRange===55&&!r.shadowMap.enabled')
+    assert page.evaluate('graphics.detailRange===55&&!sun.shadow.autoUpdate&&sun.shadow.map===null')
     page.locator('[data-pane="vehicle"]').tap();page.locator('#signal-hazard').tap();assert page.evaluate('car.ind===2')
     page.locator('[data-pane="activities"]').tap();page.locator('[data-activity="time"]').tap();assert page.evaluate('!!gameplay.activity&&!help.open')
     steps(page,1);page.screenshot(path=str(artifacts/'gameplay-mobile.png'))
@@ -182,6 +182,16 @@ def run_loading_failure(browser):
     assert page.locator('#boot-retry').is_visible()
     assert 'could not start' in page.locator('#boot-title').inner_text()
     context.close();print('PASS loading failure: readable graphics error and retry action',flush=True)
+    # Preparation failure must never dismiss the loading screen as a success.
+    context=browser.new_context();context.route('**/*',route)
+    original=(root/'gameplay.js').read_text(encoding='utf-8')
+    broken=original.replace('worldStream.prepareMaterials(r,cam,comp?.readBuffer||null);', "throw new Error('Simulated material preparation failure');")
+    assert broken!=original,'Material-preparation failure hook missing'
+    context.route('**/gameplay.js',lambda request:request.fulfill(body=broken,content_type='text/javascript'))
+    page=context.new_page();page.goto('https://game.test/',wait_until='load')
+    assert page.locator('#boot-retry').is_visible()
+    assert page.evaluate('gameBoot.failed&&!gameBoot.done')
+    context.close();print('PASS preparation failure: loading remains failed with Retry available',flush=True)
 
 def run_live_frames(browser):
     context=browser.new_context(viewport={'width':1000,'height':700});context.route('**/*',route)

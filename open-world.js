@@ -46,7 +46,7 @@ class OpenWorld {
     if(!other.policeActive&&impact>5)this.crime(other.police?1.5:.45,other.police?'Police vehicle hit':'Traffic collision reported');
   }
   reward(kind) {
-    const amount={race:650,delivery:400,parking:250,time:800,getaway:1800}[kind]||0;
+    const amount=kind==='taxi'?this.game.passengerJobs.fare(this.game.activity):{race:650,delivery:400,parking:250,time:800,getaway:1800}[kind]||0;
     this.cash+=amount;this.earned+=amount;return amount;
   }
   snapshot(){return{cash:this.cash,health:this.health,heat:this.heat,earned:this.earned,escapes:this.escapes,distance:this.distance};}
@@ -64,7 +64,7 @@ class OpenWorld {
     const v=mkCar('Sedan');v.police=true;
     // Own paint overrides: never recolour shared civilian materials.
     const paint=carMat('#e1e5e3').clone();
-    v.o.traverse(o=>{if(o.isMesh&&o.material.isMeshPhysicalMaterial&&o.material!==GLASS&&o.material.clearcoat>.2)o.material=paint;});
+    v.o.traverse(o=>{if(o.isMesh&&o.material.isMeshPhysicalMaterial&&![GLASS,civicGlass,fdGlass,lampCoverMaterial].includes(o.material)&&o.material.clearcoat>.2)o.material=paint;});
     bx('#19232d',1.6,.10,.75,-.2,2.04,0,v.o);
     v.sirens=[-1,1].map(side=>{const material=new THREE.MeshBasicMaterial({color:side<0?'#ff4759':'#479bff',toneMapped:false});const mesh=bx(material,.65,.15,.31,-.2,2.15,side*.2,v.o);mesh.visible=false;return mesh;});
     const canvas=document.createElement('canvas');canvas.width=256;canvas.height=64;const c=canvas.getContext('2d');c.fillStyle='#172633';c.fillRect(0,0,256,64);c.fillStyle='#f4f2e8';c.font='bold 40px sans-serif';c.textAlign='center';c.fillText('POLICE',128,46);
@@ -207,5 +207,143 @@ class OpenWorld {
     for(const v of this.units)if(v.policeActive){ctx.fillStyle=Math.floor(this.game.elapsed*5)%2?'#ff828d':'#76e4e1';ctx.beginPath();ctx.arc(v.x*scale,v.z*scale,2.5,0,Math.PI*2);ctx.fill();}
     if(this.serviceTarget){const s=this.serviceTarget;ctx.strokeStyle='#ffd38a';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(s.x*scale,s.z*scale,5,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#ffd38a';ctx.fillRect(s.x*scale-1.5,s.z*scale-1.5,3,3);}
     ctx.restore();
+  }
+}
+
+/* One reusable mission participant, independent of the ambient population slider. */
+class PassengerJobs {
+  constructor(game){this.game=game;this.actor=null;this.vehicle=null;this.departure=null;}
+  static names=['Maya','Jonas','Elena','Ren'];
+  static outfits=[
+    {skin:'#c68a62',hair:'#3b2416',shirt:'#f2c14e',pants:'#2b3a55',shoe:'#222',long:true},
+    {skin:'#e0ac85',hair:'#1b1410',shirt:'#527b8b',pants:'#363a42',shoe:'#292c30',long:false},
+    {skin:'#8d5a3b',hair:'#1b1410',shirt:'#b75b65',pants:'#d1bda0',shoe:'#443b32',long:true},
+    {skin:'#f1c7a5',hair:'#3b2416',shirt:'#59856a',pants:'#333b48',shoe:'#e2d9cf',long:false}
+  ];
+  validTarget(t){return this.game.clearFootprint(t.curb,{L:.7,W:.7})&&Math.hypot(t.curb.x-t.x,t.curb.z-t.z)>2&&Math.hypot(t.curb.x-t.x,t.curb.z-t.z)<5;}
+  start(a){
+    this.vehicle=car;this.departure=null;
+    a.passenger={name:PassengerJobs.names[(this.game.completed.taxi||0)%4],comfort:100,lastDamage:car.dmg,vehicleName:car.n};
+    this.ensureActor(a.passenger.name);this.pose(a.targets[0].curb,0,true);
+  }
+  restore(a,saved){
+    if(!car||car.n==='Bike'||!saved||saved.vehicleName!==car.n||!PassengerJobs.names.includes(saved.name)||!Number.isFinite(saved.comfort)||saved.comfort<=0||saved.comfort>100)return false;
+    this.vehicle=car;this.departure=null;a.passenger={name:saved.name,comfort:saved.comfort,lastDamage:car.dmg,vehicleName:car.n};
+    this.ensureActor(saved.name);if(a.index===0)this.pose(a.targets[0].curb,0,true);else this.seat();return true;
+  }
+  ensureActor(name){
+    if(!this.actor){
+      this.actor=mkHuman({...PassengerJobs.outfits[0],height:HUMAN.passengerHeight});
+      this.actor.g.visible=false;this.phase=0;
+      this.outfitParts={};for(const [channel,color]of Object.entries(PassengerJobs.outfits[0]))if(typeof color==='string'){this.outfitParts[channel]=[];this.actor.g.traverse(o=>{if(o.isMesh&&o.material===mat(color))this.outfitParts[channel].push(o);});}
+      this.belt=civicBar(this.actor.tor,[.15,.61,.22],[.15,.02,-.13],.045,mat('#222831'));this.belt.visible=false;
+      this.visualLocal=new THREE.Vector3();
+      this.labelCanvas=document.createElement('canvas');this.labelCanvas.width=256;this.labelCanvas.height=64;
+      this.labelTexture=new THREE.CanvasTexture(this.labelCanvas);this.labelTexture.encoding=THREE.sRGBEncoding;
+      const label=this.label=new THREE.Sprite(new THREE.SpriteMaterial({map:this.labelTexture,depthWrite:false,toneMapped:false}));label.position.set(0,2.25,0);label.scale.set(1.45,.36,1);this.actor.g.add(label);
+    }
+    const outfit=PassengerJobs.outfits[Math.max(0,PassengerJobs.names.indexOf(name))];for(const [channel,parts]of Object.entries(this.outfitParts))for(const part of parts)part.material=mat(outfit[channel]);
+    if(this.actor.longHair)this.actor.longHair.visible=outfit.long;
+    const ctx=this.labelCanvas.getContext('2d');ctx.clearRect(0,0,256,64);ctx.fillStyle='#10202be8';ctx.fillRect(0,0,256,64);ctx.fillStyle='#ffd38a';ctx.textAlign='center';ctx.font='bold 30px sans-serif';ctx.fillText(name,128,43);this.labelTexture.needsUpdate=true;
+  }
+  door(amount){
+    if(!this.vehicle)return;
+    if(amount>0||this.vehicle.doorState)setVehicleDoor(this.vehicle,1,amount*1.12);
+  }
+  doorPoint(){
+    const v=this.vehicle,r=v.t.W/2+.45,spec=vehicleDoorSpec(v.t,v.n),u=(spec.rear+spec.front)/2;
+    return{x:v.x+Math.cos(v.a)*u-Math.sin(v.a)*r,z:v.z+Math.sin(v.a)*u+Math.cos(v.a)*r,a:v.a};
+  }
+  clearWalk(from,to){
+    const count=Math.max(1,Math.ceil(Math.hypot(to.x-from.x,to.z-from.z)/.25));
+    for(let i=0;i<=count;i++){const p={x:from.x+(to.x-from.x)*i/count,z:from.z+(to.z-from.z)*i/count,a:0};
+      if(!this.game.clearFootprint(p,{L:.6,W:.6})||cars.some(v=>vehicleOverlap({...p,t:{L:.6,W:.6}},v)))return false;}
+    return true;
+  }
+  pose(point,moving,wave=false){
+    if(!this.actor)return;this.phase+=(moving?DT*7:DT*.7);
+    this.actor.seated=false;this.anchored=false;if(this.label)this.label.visible=true;if(this.belt)this.belt.visible=false;
+    const H=this.actor;H.g.position.set(point.x,worldElevation(point.x,point.z),point.z);H.g.rotation.set(0,-point.a,0);
+    H.tor.rotation.x=0;if(H.head)H.head.rotation.y=0;
+    for(const eye of H.eyes||[])eye.scale.y=.02;
+    H.g.visible=Math.hypot(point.x-P.x,point.z-P.z)<95;anim(H,this.phase,moving?.55:0,false,false);
+    if(wave&&!moving){H.arms[1].sh.rotation.z=-2.25+Math.sin(this.phase*3)*.12;H.arms[1].el.rotation.z=.65;}
+  }
+  seat(transfer=1){
+    const v=this.vehicle,H=this.actor;if(!v||!H)return;
+    const layout=this.layout=cabinSeating(v.t,v.n),lower=Math.min(1,transfer/.45),slide=Math.max(0,Math.min(1,(transfer-.45)/.55)),smooth=slide*slide*(3-2*slide);
+    const outside=v.t.W/2+.45,spec=vehicleDoorSpec(v.t,v.n),outsideU=(spec.rear+spec.front)/2;
+    const footLift=.46*(H.height/HUMAN.rigHeight)*(1-Math.cos(layout.legAngle*lower)),rootY=Math.max(layout.rootY*lower,layout.floor*smooth-footLift);
+    this.visualLocal.set(outsideU+(layout.x-outsideU)*smooth,rootY,outside+(layout.z-outside)*smooth);
+    this.anchored=true;H.seated=transfer>=1;
+    H.body.position.y=HUMAN.soleOffset;H.tor.scale.y=1+Math.sin((this.game.elapsed||0)*1.8)*.002;
+    const motion=this.game.settings?.motion!==false;
+    H.tor.rotation.z=.06*lower-.20*Math.sin(transfer*Math.PI)+(motion?Math.max(-.035,Math.min(.035,(v.ax||0)*.003)):0);
+    H.tor.rotation.x=motion?Math.max(-.035,Math.min(.035,(v.ay||0)*.003)):0;
+    H.legs.forEach(l=>{l.hip.rotation.z=layout.legAngle*lower;l.knee.rotation.z=-layout.legAngle*lower-(v.n==='Van'?.35:1.05)*Math.sin(slide*Math.PI);});
+    H.arms.forEach(a=>{a.sh.rotation.z=.15*lower;a.el.rotation.z=.70*lower;});
+    if(H.head)H.head.rotation.y=motion?.06*Math.sin((this.game.elapsed||0)*.6):0;
+    for(const eye of H.eyes||[])eye.scale.y=.02*((this.game.elapsed||0)%4.8>4.66?.12:1);
+    if(this.label)this.label.visible=false;if(this.belt)this.belt.visible=H.seated;
+    H.g.visible=true;this.syncVisual();
+  }
+  syncVisual(){
+    if(!this.anchored||!this.vehicle||!this.actor?.g.visible)return;
+    const o=this.vehicle.o;this.actor.g.position.copy(this.visualLocal).applyQuaternion(o.quaternion).add(o.position);this.actor.g.quaternion.copy(o.quaternion);
+  }
+  fare(a){return a?.passenger?350+Math.round(a.passenger.comfort*3)+Math.round(Math.max(0,1-a.elapsed/a.limit)*100):0;}
+  rating(a){return a.passenger.comfort>=90?'Excellent ride':a.passenger.comfort>=70?'Good ride':a.passenger.comfort>=40?'Rough ride':'Uncomfortable ride';}
+  update(a){
+    const g=this.game,p=a.passenger,v=this.vehicle;
+    if(car!==v){g.finishActivity(false,'Passenger job ended: you left the booked car.');return;}
+    if(g.sandbox.stars>=2){g.finishActivity(false,'Passenger job ended: the police pursuit frightened your passenger.');return;}
+    const sp=Math.hypot(v.vx,v.vz),t=a.targets[a.index];
+    if(a.index===1){
+      const damage=Math.max(0,v.dmg-p.lastDamage);p.lastDamage=v.dmg;
+      const harsh=sp>3?Math.max(0,-(v.ax||0)-5,Math.abs(v.ay||0)-4.5,sp-20):0;
+      p.comfort=Math.max(0,p.comfort-damage*1.2-harsh*DT*1.5-g.sandbox.heat*DT*.4);
+      if(p.comfort<=0){g.finishActivity(false,'Passenger job ended: the ride became too dangerous.');return;}
+    }else{
+      const pos=this.actor.g.position,dx=pos.x-v.x,dz=pos.z-v.z,c=Math.cos(v.a),s=Math.sin(v.a);
+      if(sp>2&&Math.abs(dx*c+dz*s)<v.t.L/2+.25&&Math.abs(-dx*s+dz*c)<v.t.W/2+.25){g.sandbox.crime(1.3,'Passenger collision reported');g.finishActivity(false,'Passenger hit. Job failed.');return;}
+    }
+    const angle=Math.atan2(Math.sin(v.a-t.a),Math.cos(v.a-t.a)),door=this.doorPoint();
+    const aligned=!g.transition&&sp<.5&&Math.hypot(v.x-t.x,v.z-t.z)<3.2&&Math.abs(angle)<.5;
+    p.blocked=aligned&&!this.clearWalk(t.curb,door);const stopped=aligned&&!p.blocked;
+    a.hold=stopped?a.hold+DT:0;
+    this.door(Math.sin(Math.min(1,a.hold/.3)*Math.PI/2)*Math.min(1,(2-a.hold)/.3));
+    if(a.index===0&&a.hold<=1.2||a.index===1&&a.hold>=.9){
+      const from=a.index===0?t.curb:door,to=a.index===0?door:t.curb;
+      const progress=Math.max(0,Math.min(1,(a.hold-(a.index===0?.3:.9))/.9));
+      this.pose({x:from.x+(to.x-from.x)*progress,z:from.z+(to.z-from.z)*progress,a:progress>0?Math.atan2(to.z-from.z,to.x-from.x):t.a},progress>0&&progress<1,a.hold===0);
+    }else this.seat(a.index===0?Math.min(1,(a.hold-1.2)/.7):a.hold<=.3?1:Math.max(0,1-(a.hold-.3)/.6));
+    if(a.hold+1e-8>=2){
+      this.door(0);a.hold=0;
+      if(a.index===0){a.index=1;p.lastDamage=v.dmg;this.seat();g.notify(`${p.name} is aboard. Drive smoothly to the drop-off; comfort earns a larger tip.`);g.showTarget();g.save();}
+      else g.finishActivity(true,`${p.name} delivered · ${this.rating(a)}`);
+    }
+  }
+  finish(a,success){
+    this.door(0);
+    if(success){const point=a.targets[1].curb;this.departure={...point,time:0};this.pose(point,0);}
+    else {this.departure=null;if(this.actor){this.actor.g.visible=false;this.actor.seated=false;}if(this.label)this.label.visible=false;if(this.belt)this.belt.visible=false;}
+    this.anchored=false;
+    this.vehicle=null;
+  }
+  tick(){
+    const d=this.departure;if(!d)return;d.time+=DT;
+    if(d.time>=6){this.actor.g.visible=false;this.departure=null;return;}
+    const next={x:d.x+Math.cos(d.a)*.025,z:d.z+Math.sin(d.a)*.025,a:d.a};
+    const clear=this.game.clearFootprint(next,{L:.6,W:.6})&&tile(next.x,next.z)!==1&&!cars.some(v=>vehicleOverlap({...next,t:{L:.7,W:.7}},v));
+    if(clear){d.x=next.x;d.z=next.z;}this.pose(d,clear);
+  }
+  hud(a,distance){
+    const p=a.passenger;
+    document.getElementById('passenger-name').textContent=p.name;
+    document.getElementById('passenger-fare').textContent=`Fare $${this.fare(a)}`;
+    document.getElementById('passenger-comfort').value=p.comfort;
+    document.getElementById('passenger-comfort-value').textContent=Math.round(p.comfort)+'%';
+    if(p.blocked)return 'Passenger path blocked · pull forward slightly to clear the door';
+    return a.hold>0?`${a.index===0?'Boarding':'Passenger exiting'} · keep still ${a.hold.toFixed(1)} / 2.0 s`:a.index===0?`Curbside pickup · ${distance} m · stop facing the arrow`:`Drop-off · ${distance} m · smooth driving earns tips`;
   }
 }

@@ -40,3 +40,23 @@ body #game-notice[data-urgent=true]{border-color:var(--warning)!important;color:
 @media(max-height:500px) and (orientation:landscape){#interaction-prompt{margin-top:5px}body #game-notice{position:fixed;left:50%;transform:translateX(-50%)!important;bottom:auto;top:calc(12px + var(--safe-top))!important;width:min(260px,calc(100vw - 400px))!important;font-size:11px!important;padding:8px!important;margin:0;background:var(--panel)!important;border:1px solid var(--line)!important}#target-direction{left:50%;right:auto;top:40%;transform:translate(-50%,-50%)}}
 
 @media(forced-colors:active){#interaction-prompt,#map-toggle,.boot-card{border-color:ButtonText}}
+
+#passenger-status{border-top:1px solid var(--line);padding-top:6px;margin-top:6px}
+.passenger-summary{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;font-size:11px}
+#activity-hud .passenger-summary strong{font-size:11px;color:var(--accent)}
+.passenger-comfort{display:flex;align-items:center;gap:6px;font-size:10px;margin:6px 0}
+.passenger-comfort progress{width:100%;min-width:0;height:6px;accent-color:var(--accent)}
+.passenger-comfort span{min-width:3ch;font-variant-numeric:tabular-nums}
+#activity-hud #target-direction{position:static;transform:none;display:flex;justify-content:center;align-items:center;gap:6px;margin-top:4px}
+#activity-hud #target-direction span{font-size:20px;line-height:24px}
+#activity-hud #target-direction small{font-size:9px;padding:2px 0;white-space:normal;background:transparent}
+@media(max-width:600px) and (min-height:501px){
+ body #activity-hud{left:auto;right:max(12px,env(safe-area-inset-right));top:calc(120px + var(--safe-top));bottom:auto;transform:none;width:calc(100vw - min(184px,calc(100vw - 148px)) - 36px);padding:8px}
+ #activity-hud .gp-meter{flex-wrap:wrap;font-size:10px}
+ #activity-hud #activity-menu{width:100%;min-height:44px}
+ .passenger-comfort{flex-wrap:wrap}.passenger-comfort progress{width:calc(100% - 34px);flex:1}
+}
+@media(max-height:500px) and (orientation:landscape){
+ body #activity-hud{left:calc(var(--map-left) + var(--map-size) + 8px);transform:none;width:min(300px,calc(100vw - var(--map-left) - var(--map-size) - 200px))}
+ #activity-hud .gp-meter{flex-wrap:wrap}
+}

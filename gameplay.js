@@ -8,6 +8,7 @@
   const speed = v => Math.hypot(v.vx, v.vz);
   const clock = seconds => {const tenths=Math.max(0,Math.round(seconds*10));return `${Math.floor(tenths/600)}:${((tenths%600)/10).toFixed(1).padStart(4,'0')}`;};
   const activities = {
+    taxi: {name:'Passenger ride', description:'$350–$750 · Pick up a waiting passenger at the curb. Smooth driving earns tips. Use the same car; recovery or a serious pursuit ends the job.', count:2, limit:240},
     getaway: {name:'Hot cargo', description:'$1,800 · Collect three drops, then lose the police before time runs out. A fast, healthy car helps.', count:3, limit:200},
     race: {name:'Coastal sprint', description:'Pass six checkpoints in order before the timer runs out.', count:6, limit:150},
     delivery: {name:'Parcel run', description:'Collect a parcel, then stop at the delivery point. Hold still at each stop.', count:2, limit:180},
@@ -36,9 +37,11 @@
     }
 
     init() {
-      this.buildUI(); this.makeMarker(); this.makePovCabin(); this.sandbox=new OpenWorld(this); this.restore(); this.applySettings();if(car&&camMode===3)this.povCamera();this.updatePovCabin();
+      this.buildUI(); this.makeMarker(); this.makePovCabin(); this.sandbox=new OpenWorld(this);this.passengerJobs=new PassengerJobs(this); this.restore(); this.applySettings();if(car&&camMode===3)this.povCamera();this.updatePovCabin();
       if(typeof CityMultiplayer==='function')this.multiplayer=new CityMultiplayer(this);
-      this.bind(); updateHud(); this.renderMenu(); window.gameBoot?.ready();
+      this.bind(); updateHud(); this.renderMenu();
+      $('boot-status').textContent='Getting the city ready for your first drive…';
+      worldStream.prepareMaterials(r,cam,comp?.readBuffer||null);simLast=performance.now();simAccumulator=0;resetInput();window.gameBoot?.ready();
       window.addEventListener('pagehide', () => this.save());
       document.addEventListener('visibilitychange', () => { if(document.hidden) this.save(); });
       window.addEventListener('storage', event => {
@@ -74,7 +77,8 @@
       $('mm').insertAdjacentHTML('afterend','<button id="map-toggle" class="help-button" aria-controls="mm" aria-expanded="false" title="Enlarge map (G)">Map</button><output id="heading-status" aria-label="Heading">N</output><button id="interaction-prompt" hidden></button><div id="target-direction" hidden><span aria-hidden="true">➤</span><small></small></div>');
       $('h').append($('interaction-prompt'));
       $('vehicle-hud').insertAdjacentHTML('beforeend','<div class="gp-quick"><button type="button" id="horn-control" title="Horn (B)">Horn · B</button><button type="button" id="lights-control" title="Headlights (L)">Lights: Auto</button></div>');
-      document.body.insertAdjacentHTML('beforeend','<section id="activity-hud" aria-label="Current driving activity" hidden><strong id="activity-name"></strong><p id="activity-target"></p><div class="gp-meter"><span id="activity-time"></span><button type="button" id="activity-menu">Menu</button></div></section><output id="fps-counter" aria-label="Rendering frame rate" hidden>— FPS</output><div id="game-notice" role="status" aria-live="polite" hidden></div>');
+      document.body.insertAdjacentHTML('beforeend','<section id="activity-hud" aria-label="Current driving activity" hidden><strong id="activity-name"></strong><p id="activity-target"></p><div id="passenger-status" hidden><div class="passenger-summary"><span id="passenger-name"></span><strong id="passenger-fare"></strong></div><label class="passenger-comfort">Comfort <progress id="passenger-comfort" max="100" value="100" aria-label="Passenger comfort"></progress><span id="passenger-comfort-value">100%</span></label></div><div class="gp-meter"><span id="activity-time"></span><button type="button" id="activity-menu">Menu</button></div></section><output id="fps-counter" aria-label="Rendering frame rate" hidden>— FPS</output><div id="game-notice" role="status" aria-live="polite" hidden></div>');
+      $('activity-hud').append($('target-direction'));
     }
 
     bind() {
@@ -153,7 +157,15 @@
       const ratio=Math.min(devicePixelRatio,p.pixel,graphics.mobile?1.25:1.5)*this.settings.resolution/100;
       r.setPixelRatio(ratio); if(comp)comp.setPixelRatio(ratio); rs();
       const size=graphics.mobile?Math.min(1024,p.shadow):p.shadow;
-      r.shadowMap.enabled=size>0; sun.castShadow=size>0;
+      // Keep the lighting shader topology stable across presets. Removing the sun
+      // from the shadow-light list creates a second set of programs in r128 and
+      // can synchronously stall the driver for seconds on the first Low frame.
+      r.shadowMap.enabled=true;sun.castShadow=true;
+      graphics.sunShadows=size>0;
+      sun.shadow.autoUpdate=size>0&&sun.intensity>.00925;sun.shadow.needsUpdate=sun.shadow.autoUpdate;
+      // A uniform-only cutoff skips shadow texture reads on Low without new shaders.
+      sun.shadow.bias=sun.shadow.autoUpdate?-.00008:10000;
+      if(!size&&sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}
       if(size&&sun.shadow.mapSize.x!==size) {if(sun.shadow.map)sun.shadow.map.dispose();sun.shadow.map=null;sun.shadow.mapSize.set(size,size);sun.shadow.needsUpdate=true;}
       if(comp)for(const pass of comp.passes)if(pass instanceof THREE.UnrealBloomPass)pass.enabled=p.bloom;
       graphics.detailRange=Math.min(p.detail,graphics.mobile?70:110);graphics.vehicleRange=Math.min(p.vehicle,graphics.mobile?38:60);updateScenery();
@@ -176,7 +188,7 @@
       for(const p of [...peds].sort((a,b)=>distance(b)-distance(a)).slice(0,Math.max(0,peds.length-this.settings.pedestrians)))removePed(p);
       while(peds.length<this.settings.pedestrians){
         let p=this.populationPool.pedestrians.pop();if(p){peds.push(p);S.add(p.o);}else p=mkPed(0,0);
-        p.dn=p.fl=p.vx=p.vz=0;for(let attempt=0;attempt<32;attempt++){placePedestrian(p);if(!this.populationReady||distance(p)>55)break;}
+        if(!placePedestrian(p,!this.populationReady)){removePed(p);break;}
         p.o.position.set(p.x,worldElevation(p.x,p.z),p.z);p.o.rotation.set(0,-p.a,0);changed=true;
       }
       const traffic=cars.filter(v=>v.ai&&!protectedCar(v));
@@ -217,6 +229,7 @@
       candidates.sort((a,b)=>a.d-b.d);
       const point=candidates.find(p=>this.clearFootprint(p,v.t)&&!cars.some(o=>o!==v&&vehicleOverlap({...v,...p},o))&&(!car?Math.hypot(p.x-P.x,p.z-P.z)>v.t.L*.6:true));
       if(!point){this.notify('No clear road nearby. Try again after traffic moves.',true);return;}
+      if(this.activity?.kind==='taxi')this.finishActivity(false,'Passenger job ended: the booked car was recovered.');
       Object.assign(v,{x:point.x,z:point.z,a:point.a,vx:0,vz:0,yr:0,ax:0,ay:0,st:0,roll:0,pitch:0,rollV:0,pitchV:0,heave:0,heaveVelocity:0,thr:0,brk:0,hold:0,g:1,contacts:null,ai:null});
       v.o.position.set(v.x,0,v.z);v.o.rotation.set(0,-v.a,0);
       if(car){P.x=v.x;P.z=v.z;P.a=v.a;ca=v.a;cp.set(v.x-Math.cos(v.a)*10,3,v.z-Math.sin(v.a)*10);}
@@ -251,7 +264,7 @@
         $('vehicle-signals').textContent=(car.ind===2?'◀ Hazards ▶':car.ind===-1?'◀ Left signal':car.ind===1?'Right signal ▶':'Signals off')+' · '+(this.lightLevel(car)>.3?'Lights on':'Lights off');
       }
       document.querySelector('.unit').textContent=this.settings.units==='mph'?'MPH':'km/h';
-      const direction=$('target-direction'),target=this.activity?.targets[this.activity.index];direction.hidden=!target||help.open;
+      const direction=$('target-direction'),target=this.activity&&!this.activity.escape?this.activity.targets[this.activity.index]:null;direction.hidden=!target||help.open;
       if(target&&!help.open){cam.updateMatrixWorld();const point=new THREE.Vector3(target.x,1,target.z).project(cam),inView=point.z>-1&&point.z<1&&Math.abs(point.x)<.82&&Math.abs(point.y)<.72;
         direction.hidden=inView;if(!inView){const bearing=Math.atan2(target.z-P.z,target.x-P.x),view=camMode?P.a+yo:ca+yo,angle=wrap(bearing-view);direction.querySelector('span').style.transform='rotate('+(angle*180/PI-90)+'deg)';direction.querySelector('small').textContent='Target · '+Math.round(Math.hypot(target.x-P.x,target.z-P.z))+' m';}
       }
@@ -263,7 +276,7 @@
       const frequencies=kind==='horn'?[350,440]:[kind==='shift'?95:135];
       for(const frequency of frequencies){const oscillator=c.createOscillator(),gain=c.createGain();oscillator.type=kind==='horn'?'triangle':'sine';oscillator.frequency.setValueAtTime(frequency,now);if(kind!=='horn')oscillator.frequency.exponentialRampToValueAtTime(45,now+duration);gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(kind==='horn'?.12:.055,now+.012);gain.gain.exponentialRampToValueAtTime(.0001,now+duration);oscillator.connect(gain);gain.connect(gameAudio.master);oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};oscillator.start();oscillator.stop(now+duration+.01);}
     }
-    horn() {if(!car||this.transition)return;const now=performance.now();if(now-this.lastHorn<500)return;this.lastHorn=now;this.sound('horn');}
+    horn() {if(!car||this.transition)return;const now=performance.now();if(now-this.lastHorn<500)return;this.lastHorn=now;pedestrianAI.horn(car,peds);this.sound('horn');}
     lightLevel(v) {return v?.lightsMode==='on'?1:v?.lightsMode==='off'?0:night;}
     toggleLights() {if(!car)return;const modes=['auto','on','off'];car.lightsMode=modes[(modes.indexOf(car.lightsMode||'auto')+1)%3];this.syncLights(car);this.hud();this.save();}
     syncLights(v) {
@@ -274,19 +287,11 @@
 
     nearbyCar() {let best=null,distance=6;for(const v of cars){const d=Math.hypot(v.x-P.x,v.z-P.z);if(d<distance&&speed(v)<1){best=v;distance=d;}}return best;}
     exitPoint(v,side,onlySide=false) {
-      const length=Math.min(1.1,v.t.L*.25),along=v.n==='Bike'?0:v.t.L*.19-length/2,distance=v.t.W/2+1.25;
+      const spec=v.n==='Bike'?null:vehicleDoorSpec(v.t,v.n),along=spec?(spec.rear+spec.front)/2:0,distance=v.t.W/2+1.25;
       for(const sign of onlySide?[side]:[side,-side]) {const x=v.x+Math.cos(v.a)*along-Math.sin(v.a)*distance*sign,z=v.z+Math.sin(v.a)*along+Math.cos(v.a)*distance*sign,point={x,z,a:v.a};if(this.clearFootprint(point,{L:.7,W:.7})&&!cars.some(o=>o!==v&&vehicleOverlap({...point,t:{L:.7,W:.7}},o)))return{x,z,side:sign};}
       return null;
     }
-    door(v,side) {
-      if(v.n==='Bike')return null;
-      v.doors ||= new Map();if(v.doors.has(side))return v.doors.get(side);
-      const group=new THREE.Group(),length=Math.min(1.1,v.t.L*.25),paint=v.o.children.find(m=>m.isMesh&&m.material.isMeshPhysicalMaterial&&![GLASS,civicGlass,fdGlass,lampCoverMaterial].includes(m.material))?.material||carMat(v.t.paint||'#9fa8ae');group.position.set(v.t.L*.19,.86,side*(v.t.W/2+.025));v.o.add(group);
-      bx(paint,length,.49,.035,-length/2,-.17,0,group);
-      const pane=new THREE.Mesh(new THREE.PlaneGeometry(length*.82,.30),civicGlass);pane.position.set(-length*.51,.225,0);pane.material=civicGlass;pane.rotation.y=side<0?PI:0;group.add(pane);
-      civicBar(group,[-length,.08,0],[-length*.87,.40,0],.025,paint);civicBar(group,[-length*.87,.40,0],[-.13,.40,0],.025,paint);civicBar(group,[-.13,.40,0],[0,.08,0],.025,paint);
-      group.visible=false;v.doors.set(side,group);return group;
-    }
+    door(v,side) {return ensureVehicleDoors(v)?.doors.get(side)||null;}
     act() {
       if(this.transition)return;
       const exiting=!!car,v=car||this.nearbyCar();
@@ -303,12 +308,12 @@
     beforeStep() {
       const t=this.transition;if(!t)return;
       t.elapsed+=DT;const phase=Math.min(1,t.elapsed/.95),open=Math.sin(Math.min(1,phase/.30)*PI/2)*Math.min(1,(1-phase)/.24);
-      if(t.door){t.door.visible=open>.005;t.door.rotation.y=t.point.side*open*1.12;}
+      if(t.door)setVehicleDoor(t.v,t.point.side,t.point.side*open*1.12);
       const u=clamp((phase-.20)/.58,0,1),seat={x:t.v.x,z:t.v.z};
       const start=t.exiting?seat:t.from,end=t.exiting?t.point:seat;
       P.x=start.x+(end.x-start.x)*u;P.z=start.z+(end.z-start.z)*u;P.a=t.v.a;
       P.o.visible=t.exiting?phase>.24:phase<.71;P.ph+=DT*8;anim(P.H,P.ph,u>0&&u<1?.6:0,false,false);P.H.tor.rotation.z=(t.exiting?1:-1)*Math.sin(u*PI)*.35;P.H.arms[0].sh.rotation.z=-.6*open;
-      if(phase>=1){if(t.door)t.door.visible=false;P.H.tor.rotation.z=0;P.H.arms[0].sh.rotation.z=0;
+      if(phase>=1){if(t.door)setVehicleDoor(t.v,t.point.side,0);P.H.tor.rotation.z=0;P.H.arms[0].sh.rotation.z=0;
         if(t.exiting){car=null;camMode=0;P.x=t.point.x;P.z=t.point.z;P.o.visible=true;t.v.o.visible=true;}
         else{car=t.v;this.lastVehicle=car;P.x=car.x;P.z=car.z;P.o.visible=false;this.lastGear=car.g;this.syncLights(car);}
         this.transition=null;this.sound('door');this.save();this.hud();
@@ -316,14 +321,15 @@
     }
 
     tick() {
-      this.elapsed+=DT;this.saveTimer+=DT;
+      this.elapsed+=DT;this.saveTimer+=DT;pedestrianPopulation.tick(peds,cars,P,DT);
       this.sandbox.tick();
+      this.passengerJobs.tick();
       if(car){this.syncLights(car);if(this.lastGear!==null&&car.g!==this.lastGear&&speed(car)>2)this.sound('shift');this.lastGear=car.g;
         if(car.ind===-1||car.ind===1){if(Math.abs(wrap(car.a-(car.signalAngle??car.a)))>.35)car.signalTurned=true;if(car.signalTurned&&Math.abs(car.st)<.05)car.ind=0;}
       }else this.lastGear=null;
       for(const v of cars){if(v.playerHead&&v!==car)this.syncLights(v);
         v.o.position.y=this.settings.motion?(v.heave||0):worldElevation(v.x,v.z);
-        updateTerrainPose(v);v.o.rotation.set(v.groundRoll+(this.settings.motion?v.roll:0),-v.a,v.groundPitch+(this.settings.motion?v.pitch:0));
+        syncVehicleDoors(v);updateTerrainPose(v);v.o.rotation.set(v.groundRoll+(this.settings.motion?v.roll:0),-v.a,v.groundPitch+(this.settings.motion?v.pitch:0));
         for(const wheel of v.wheels){const contact=v.contacts?.find(w=>w.front===wheel.front&&Math.sign(w.q)===Math.sign(wheel.steer.position.z));wheel.steer.position.y=(v.t.r||.32)+(this.settings.motion?(contact?.compression||0):0);}
       }
       if(this.activity)this.updateActivity();
@@ -342,7 +348,8 @@
       const part=(parent,material,x,y,z,w,h,d)=>{const mesh=new THREE.Mesh(box,material);mesh.position.set(x,y,z);mesh.scale.set(w,h,d);parent.add(mesh);return mesh;};
       part(this.povInterior,trim,.86,.94,0,.52,.24,1.7);
       part(this.povInterior,rubber,.72,1.075,0,.57,.035,1.72);
-      part(this.povInterior,rubber,.05,.38,0,1.7,.045,1.7);
+      this.povFloor=part(this.povInterior,rubber,.05,.16,0,1.7,.045,1.7);
+      this.povSeats=[-1,1].map(side=>{const seat=new THREE.Group();this.povInterior.add(seat);part(seat,trim,.10,-.05,0,.46,.10,.44);const back=part(seat,trim,-.16,.26,0,.12,.50,.45);back.rotation.z=.10;part(seat,trim,-.24,.65,0,.12,.15,.25);return{seat,side};});
       part(this.povInterior,trim,.43,1.04,-.40,.43,.055,.055);
       for(const side of [-1,1]){
         part(this.povInterior,trim,-.08,.89,side*.85,1.65,.30,.055);
@@ -372,16 +379,18 @@
       const tx=motion?clamp(-(v.ax||0)*.002,-.018,.018):0,tz=motion?clamp(-(v.ay||0)*.002,-.018,.018):0;
       response.x+=(tx-response.x)*.12;response.z+=(tz-response.z)*.12;
       if(!motion)response.x=response.z=0;
-      this.povEye.set((bike?-.2:-.30)*scaleX+response.x,bike?1.55:1.32*scaleY,(bike?0:-.40*scaleZ)+response.z).applyQuaternion(v.o.quaternion).add(v.o.position);
+      this.povEye.set((v.n==='Van'?1.4:0)+(bike?-.2:-.30)*scaleX+response.x,bike?1.55:1.32*scaleY,(bike?0:-.40*scaleZ)+response.z).applyQuaternion(v.o.quaternion).add(v.o.position);
       cam.position.copy(this.povEye);const yaw=v.a+clamp(yo,-1.45,1.45),pitch=clamp(pt,-.3,.65)*.65+.015;
       this.povLook.set(cam.position.x+Math.cos(yaw)*20,cam.position.y-Math.tan(pitch)*20,cam.position.z+Math.sin(yaw)*20);cam.lookAt(this.povLook);
       if(motion)cam.rotateZ(clamp(-v.roll*.22,-.018,.018));
       cam.fov=58;cam.updateProjectionMatrix();cp.copy(cam.position);
     }
     updatePovCabin() {
-      this.povCabin.visible=!!car&&camMode===3;if(!this.povCabin.visible)return;
-      const v=car,bike=v.n==='Bike';this.povCabin.position.copy(v.o.position);this.povCabin.quaternion.copy(v.o.quaternion);this.povCabin.scale.set(bike?1:v.t.L/4.55,v.n==='Van'?1.55:v.n==='Kaze R'?1.08:1,bike?1:v.t.W/1.82);
+      this.passengerJobs?.syncVisual();
+      this.povCabin.visible=!!car&&(camMode===3||camMode===2);if(!this.povCabin.visible)return;
+      const v=car,bike=v.n==='Bike',offset=v.n==='Van'?1.4:0;this.povCabin.position.set(offset,0,0).applyQuaternion(v.o.quaternion).add(v.o.position);this.povCabin.quaternion.copy(v.o.quaternion);this.povCabin.scale.set(bike?1:v.t.L/4.55,v.n==='Van'?1.55:v.n==='Kaze R'?1.08:1,bike?1:v.t.W/1.82);
       this.povInterior.visible=!bike;this.povBike.visible=bike;this.povWheel.rotation.x=-v.st*9;this.povBike.rotation.y=-v.st*.35;
+      if(!bike){const layout=cabinSeating(v.t,v.n),sx=this.povCabin.scale.x,sy=this.povCabin.scale.y,sz=this.povCabin.scale.z;this.povFloor.position.y=layout.floor/sy-.0225;for(const {seat,side}of this.povSeats){seat.position.set((layout.x-offset)/sx,layout.hip/sy,side*layout.z/sz);seat.scale.set(1/sx,1/sy,1/sz);}}
       this.povNeedles[0].rotation.x=Math.PI*.75-clamp((v.rpm||900)/v.t.red,0,1)*Math.PI*1.5;
       this.povNeedles[1].rotation.x=Math.PI*.75-clamp(speed(v)*3.6/240,0,1)*Math.PI*1.5;
     }
@@ -404,12 +413,17 @@
           const chosen=candidates[(++junctions%3===0&&candidates.length>1)?1:0];edge=chosen.e;dir=chosen.d;path=chosen.lane;index=0;visited.set(edge,(visited.get(edge)||0)+1);
         }
         const p=path[index++];distance+=Math.hypot(p.x-last.x,p.z-last.z);last=p;if(trace.length<1200&&guard%3===0)trace.push({x:p.x,z:p.z});
-        if(distance<(kind==='parking'?40:70)||tile(p.x,p.z)!==1)continue;
+        if(distance<(kind==='parking'?40:kind==='taxi'?(targets.length?280:65):70)||tile(p.x,p.z)!==1)continue;
         let point={x:p.x,z:p.z,a:p.a};
-        if(kind==='parking') {let i=0,d=Infinity;edge.points.forEach((q,j)=>{const gap=Math.hypot(q.x-p.x,q.z-p.z);if(gap<d){d=gap;i=j;}});const bay=lanePoint(edge,i,dir,edge.width/2-1.75);if(nodes.some(n=>Math.hypot(bay.x-n.x,bay.z-n.z)<25))continue;point=bay;}
+        if(kind==='parking'||kind==='taxi') {let i=0,d=Infinity;edge.points.forEach((q,j)=>{const gap=Math.hypot(q.x-p.x,q.z-p.z);if(gap<d){d=gap;i=j;}});const bay=lanePoint(edge,i,dir,edge.width/2-1.75);if(nodes.some(n=>Math.hypot(bay.x-n.x,bay.z-n.z)<25))continue;point=bay;}
         if(cars.some(v=>v!==car&&!v.ai&&Math.hypot(v.x-point.x,v.z-point.z)<7))continue;
-        if(kind==='parking'&&!this.clearFootprint(point,{L:6,W:2.7}))continue;
-        targets.push({x:point.x,z:point.z,a:point.a});distance=0;
+        if((kind==='parking'||kind==='taxi')&&!this.clearFootprint(point,{L:6,W:2.7}))continue;
+        if(kind==='taxi'){
+          if(edge.width===ROAD.bridge||targets.length&&Math.hypot(point.x-targets[0].x,point.z-targets[0].z)<130)continue;
+          point={...point,curb:{x:point.x-Math.sin(point.a)*3,z:point.z+Math.cos(point.a)*3,a:point.a}};
+          if(tile(point.curb.x,point.curb.z)===1||!this.passengerJobs.validTarget(point)||cars.some(v=>Math.hypot(v.x-point.curb.x,v.z-point.curb.z)<3))continue;
+        }
+        targets.push({...point});distance=0;
       }
       if(targets.length!==spec.count)throw new Error('No clear route is available. Move to another road and try again.');
       return{targets,trace};
@@ -419,7 +433,8 @@
       if(!activities[kind]||this.activity)return;
       if(!car||this.transition){$('activity-status').textContent='Enter a stopped car before starting an activity.';return;}
       if(car.dmg>150){$('activity-status').textContent='This car’s engine is disabled. Choose another car before starting.';return;}
-      try{const route=this.route(kind);this.activity={kind,...route,index:0,elapsed:0,hold:0,limit:activities[kind].limit};this.result=null;if(kind==='getaway')this.sandbox.crime(2,'Hot cargo intercepted. Police dispatched.');this.save();help.close();resetInput();this.showTarget();this.notify(`${activities[kind].name} started. Follow the cyan marker.`);}catch(error){$('activity-status').textContent=error.message;}
+      if(kind==='taxi'&&(car.n==='Bike'||100-Math.round(car.dmg/1.5)<40||this.sandbox.heat>0)){$('activity-status').textContent='Passenger rides need a car with at least 40% condition and no wanted level.';return;}
+      try{const route=this.route(kind);this.activity={kind,...route,index:0,elapsed:0,hold:0,limit:activities[kind].limit};this.result=null;if(kind==='taxi')this.passengerJobs.start(this.activity);if(kind==='getaway')this.sandbox.crime(2,'Hot cargo intercepted. Police dispatched.');this.save();help.close();resetInput();this.showTarget();this.notify(kind==='taxi'?`${this.activity.passenger.name} is waiting at the cyan marker. Stop at the curb, facing the arrow.`:`${activities[kind].name} started. Follow the cyan marker.`);}catch(error){$('activity-status').textContent=error.message;}
     }
     showTarget() {
       const a=this.activity;if(!a){this.marker.visible=false;return;}
@@ -430,6 +445,7 @@
       const a=this.activity;if(!a)return;a.elapsed+=DT;
       if(a.elapsed>=a.limit){this.finishActivity(false,'Time is up. Open the menu to try again.');return;}
       if(car?.dmg>150){this.finishActivity(false,'The engine is disabled. Choose another car and try again.');return;}
+      if(a.kind==='taxi'){this.passengerJobs.update(a);return;}
       if(a.escape){this.marker.visible=false;if(this.sandbox.heat===0)this.finishActivity(true,'Hot cargo delivered. Pursuit escaped.');return;}
       if(!car||this.transition){a.hold=0;return;}
       const target=a.targets[a.index],distance=Math.hypot(car.x-target.x,car.z-target.z);
@@ -444,6 +460,7 @@
       const a=this.activity;if(!a)return;
       if(success){const reward=this.sandbox.reward(a.kind);message+=` · +$${reward.toLocaleString('en-US')}`;}
       if(success){this.best[a.kind]=Math.min(this.best[a.kind]??Infinity,a.elapsed);this.completed[a.kind]=(this.completed[a.kind]||0)+1;}
+      if(a.kind==='taxi')this.passengerJobs.finish(a,success);
       this.result={kind:a.kind,success,message};this.history.unshift({kind:a.kind,success,time:a.elapsed});this.history.length=Math.min(this.history.length,12);
       this.activity=null;this.marker.visible=false;this.notify(message);this.save();this.hud();this.renderMenu();
     }
@@ -452,9 +469,11 @@
       this.sandbox?.hud();
       const label=CAMERA_VIEWS[camMode];$('camera-control').textContent=camMode===3?'POV':'Camera';$('camera-control').setAttribute('aria-label',label+'. Change camera view');$('camera-control').title='Camera: '+label+' (C)';
       this.navigationHud();const a=this.activity;$('activity-hud').hidden=!a;
+      $('passenger-status').hidden=a?.kind!=='taxi';
       if(a){$('activity-name').textContent=activities[a.kind].name;const distance=car?Math.round(Math.hypot(car.x-a.targets[a.index].x,car.z-a.targets[a.index].z)):Math.round(Math.hypot(P.x-a.targets[a.index].x,P.z-a.targets[a.index].z));
         $('activity-target').textContent=a.escape?'Break line of sight and stay out of the search radius.':a.kind==='parking'?`Park facing the arrow · hold ${a.hold.toFixed(1)} / 3.0 s`:a.kind==='delivery'?`${a.index===0?'Collect parcel':'Deliver parcel'} · ${distance} m · stop and hold`: `Checkpoint ${a.index+1} / ${a.targets.length} · ${distance} m`;
         $('activity-time').textContent=`${clock(Math.max(0,a.limit-a.elapsed))} remaining`;
+        if(a.kind==='taxi')$('activity-target').textContent=this.passengerJobs.hud(a,distance);
       }
       $('horn-control').disabled=!car||!!this.transition;$('lights-control').disabled=!car||!!this.transition;
       const mode=car?.lightsMode||'auto';$('lights-control').textContent=`Lights: ${mode[0].toUpperCase()+mode.slice(1)}`;
@@ -472,7 +491,7 @@
     snapshot() {
       const vehicle=car||this.lastVehicle;
       return{version:1,session:this.session,savedAt:Date.now(),position:{x:P.x,z:P.z,a:P.a},driving:!!car,vehicle:vehicle?{name:vehicle.n,x:vehicle.x,z:vehicle.z,a:vehicle.a,dmg:vehicle.dmg,lights:vehicle.lightsMode||'auto'}:null,
-        camera:{mode:camMode,zoom:zm},settings:{...this.settings},best:{...this.best},completed:{...this.completed},sandbox:this.sandbox.snapshot(),activity:this.activity?JSON.parse(JSON.stringify(this.activity)):null,timeOfDay:tod};
+        camera:{mode:camMode,zoom:zm,heading:ca+yo},settings:{...this.settings},best:{...this.best},completed:{...this.completed},sandbox:this.sandbox.snapshot(),activity:this.activity?JSON.parse(JSON.stringify(this.activity)):null,timeOfDay:tod};
     }
     save(manual=false) {
       if(this.transition){if(manual)this.notify('Wait for the vehicle interaction to finish, then save.');return false;}
@@ -499,10 +518,16 @@
         camMode=car&&Number.isInteger(data.camera?.mode)?clamp(data.camera.mode,0,3):0;if(camMode===3){pt=0;yo=0;}this.syncLights(v);
       }
       if(finite(data.camera?.zoom))zm=clamp(data.camera.zoom,.5,2.2);
+      ca=P.a;if(!car){if(finite(data.camera?.heading))ca=wrap(data.camera.heading);yo=0;}
       const a=data.activity,spec=activities[a?.kind];
-      if(spec&&Array.isArray(a.targets)&&a.targets.length===spec.count&&a.targets.every(p=>this.clearFootprint(p,{L:.1,W:.1}))&&Number.isInteger(a.index)&&a.index>=0&&a.index<a.targets.length&&finite(a.elapsed)&&a.elapsed>=0&&a.elapsed<spec.limit){this.activity={kind:a.kind,targets:a.targets.map(p=>({x:p.x,z:p.z,a:p.a})),trace:Array.isArray(a.trace)?a.trace.filter(p=>finite(p.x)&&finite(p.z)&&p.x>=0&&p.z>=0&&p.x<=N*T&&p.z<=N*T).slice(0,1200):[],index:a.index,elapsed:a.elapsed,limit:spec.limit,hold:0};this.showTarget();}
+      if(spec&&Array.isArray(a.targets)&&a.targets.length===spec.count&&a.targets.every(p=>this.clearFootprint(p,{L:.1,W:.1})&&(a.kind!=='taxi'||this.passengerJobs.validTarget(p)))&&Number.isInteger(a.index)&&a.index>=0&&a.index<a.targets.length&&finite(a.elapsed)&&a.elapsed>=0&&a.elapsed<spec.limit){
+        this.activity={kind:a.kind,targets:a.targets.map(p=>({x:p.x,z:p.z,a:p.a,...(a.kind==='taxi'?{curb:{x:p.curb.x,z:p.curb.z,a:p.curb.a}}:{})})),trace:Array.isArray(a.trace)?a.trace.filter(p=>finite(p.x)&&finite(p.z)&&p.x>=0&&p.z>=0&&p.x<=N*T&&p.z<=N*T).slice(0,1200):[],index:a.index,elapsed:a.elapsed,limit:spec.limit,hold:0};
+        if(a.kind==='taxi'&&!this.passengerJobs.restore(this.activity,a.passenger))this.activity=null;
+        if(this.activity)this.showTarget();
+      }
+      if(a?.kind==='taxi'&&!this.activity)this.result={kind:'taxi',success:false,message:'The saved passenger job was invalid and has been cancelled. No fare paid.'};
       if(this.activity?.kind==='getaway'){this.activity.escape=a.escape===true;if(this.activity.escape)this.marker.visible=false;this.sandbox.heat=Math.max(2,this.sandbox.heat);}
-      ca=P.a;cp.set(P.x-Math.cos(P.a)*8,4,P.z-Math.sin(P.a)*8);cam.position.copy(cp);cam.lookAt(P.x,1.5,P.z);this.lastSave=finite(data.savedAt)?data.savedAt:0;this.storageMessage='Your saved drive has been restored. Autosave is on.';
+      cp.set(P.x-Math.cos(ca+yo)*8,4,P.z-Math.sin(ca+yo)*8);cam.position.copy(cp);cam.lookAt(P.x,1.5,P.z);this.lastSave=finite(data.savedAt)?data.savedAt:0;this.storageMessage='Your saved drive has been restored. Autosave is on.';
     }
   }
   gameplay=new DrivingGame();gameplay.init();

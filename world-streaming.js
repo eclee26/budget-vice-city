@@ -25,6 +25,26 @@ class WorldStreamer {
     const color=new THREE.Color();for(let i=0;i<records.length;i++){const b=records[i],hex=b.kind==='office'?'#7e9394':b.kind==='warehouse'?'#8a8b7d':b.kind==='house2'||b.kind==='house'?'#b0aa96':'#a7aa9e';color.copy(lin(hex));this.skyline.setColorAt(i*2,color);this.skyline.setColorAt(i*2+1,color.multiplyScalar(.79));}
     this.scene.add(this.skyline);this.refreshSkyline();
   }
+  prepareMaterials(renderer,camera,target=null) {
+    // Compile registered styles even when their cells have not been visited.
+    // Hidden one-instance proxies allocate no rendered cell buffers.
+    const group=new THREE.Group(),seen=new Set(),before=renderer.info.programs.length,start=performance.now();group.visible=false;
+    for(const cell of this.cells.values())for(const part of cell.parts.values()){
+      const materials=Array.isArray(part.material)?part.material:[part.material],attributes=part.geometry.attributes;
+      const key=materials.map(m=>m.uuid).join(',')+':'+(attributes.color?.itemSize||0)+':'+!!attributes.tangent;
+      if(seen.has(key))continue;seen.add(key);
+      const mesh=new THREE.InstancedMesh(part.geometry,part.material,1);mesh.castShadow=part.castShadow;mesh.receiveShadow=part.receiveShadow;group.add(mesh);
+    }
+    const doorProxies=typeof vehicleDoorMaterialProxies==='function'?vehicleDoorMaterialProxies():null,doorProxyCount=doorProxies?.children.length||0;if(doorProxies)for(const mesh of [...doorProxies.children])group.add(mesh);
+    this.scene.add(group);const previousTarget=renderer.getRenderTarget();
+    try{
+      renderer.setRenderTarget(target);renderer.compile(this.scene,camera);
+      if(renderer.info.programs.some(program=>program.diagnostics?.runnable===false))throw new Error('City material compilation failed. Retry loading the game.');
+    }
+    finally{renderer.setRenderTarget(previousTarget);this.scene.remove(group);for(const mesh of group.children){if(typeof mesh.dispose==='function')mesh.dispose();else mesh.dispatchEvent({type:'dispose'});}}
+    this.preparation={proxies:seen.size,doorProxies:doorProxyCount,programsBefore:before,programsAfter:renderer.info.programs.length,targetEncoding:target?.texture.encoding??renderer.outputEncoding,milliseconds:performance.now()-start};
+    return this.preparation;
+  }
   load(cell) {
     if(cell.group)return;
     const group=new THREE.Group();group.userData.worldChunk=cell.key;

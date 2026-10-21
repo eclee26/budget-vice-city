@@ -9,7 +9,8 @@ const root=path.resolve(__dirname,'..'),artifacts=path.join(__dirname,'artifacts
   try{
     const context=await browser.newContext({viewport:{width:1440,height:900},ignoreHTTPSErrors:true});
     let source=await fs.readFile(path.join(root,'index.html'),'utf8');
-    source=source.replace('<script>\nconst T=10','<script>\nwindow.requestAnimationFrame=()=>0;let seed=2026;Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};\nconst T=10');
+    source=source.replace(/\r\n/g,'\n').replace('<script>\nconst T=10','<script>\nwindow.requestAnimationFrame=()=>0;let seed=2026;Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};\nconst T=10');
+    assert.ok(source.includes('window.requestAnimationFrame=()=>0'),'Deterministic fixture hook missing');
     await context.route('https://game.test/**',async route=>{const name=new URL(route.request().url()).pathname.slice(1);if(!name)return route.fulfill({body:source,contentType:'text/html'});if(/^[\w-]+\.(js|css)$/.test(name))return route.fulfill({body:await fs.readFile(path.join(root,name)),contentType:name.endsWith('css')?'text/css':'text/javascript'});return route.fulfill({status:204});});
     await context.route(/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net)\//,async route=>{const file=path.join(root,'.test-tools','cdn-cache',new URL(route.request().url()).pathname.split('/').pop());try{return await route.fulfill({body:await fs.readFile(file),contentType:'text/javascript'});}catch{return route.continue();}});
     const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});

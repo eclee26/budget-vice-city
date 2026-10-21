@@ -1,5 +1,63 @@
 # Improvement iterations
 
+## 2026-10-21 — populated neighborhoods with shared crowd rendering
+
+The prior seeded starting view had only three pedestrians within 70 m, out of a 64-person pool spread across the city. Nearby site selection now places 44 within that range, with personal space and static/vehicle clearance. As the player travels, a bounded simulation-time pass reuses distant uninvolved residents at hidden sites; active injuries, fleeing/recovery and conversations remain protected. Failed placement leaves the original position intact. Menus pause replenishment and zero/max population still reuses the existing pool.
+
+Flatten ambient body parts into four fixed geometry batches, retaining original mesh geometry, articulated transforms, linear colors and shadows. Only active matrix/color ranges upload; the original hierarchy remains available for controlled appearance/cost comparisons. In the animated starting view, total draw calls fall from 3,281 to 1,507. Geometry submissions rise from about 1.246 M to 1.330 M because batching gives up per-part frustum culling. Pixel and joint/color checks pass, as do four-neighborhood hidden-recycling and buffer-reuse checks. This is a measured scene tradeoff, not blanket FPS certification. Stronger character/environment art and mission depth remain needed; the overall provisional score stays 5.3/10.
+
+## 2026-10-21 — reactive ambient pedestrians
+
+Pedestrians now predict approaching traffic from any car, retain their sidewalk route through an evasive reaction and avoid nearby people/the on-foot player. Rotated car footprints replace the broad collision radius that could falsely knock down a person standing beside a long vehicle. Short swept knockdown steps stop at walls; clear pedestrians recover in place while blocked ones wait. Brief paired conversations, idle looks/stretches, player greetings, blinking and bounded horn reactions use the existing rig with simulation-time clocks. Removing/reusing an actor clears social links; mission passengers remain separate.
+
+Fourteen pure behavior checks and browser scenarios cover these interactions, route safety, paused animation, recovery and pooling. A 30-second maximum-density sample naturally enters walking, looking, stretching and talking states without creating graphics resources. Full gameplay and existing density/traffic checks pass. Visual review still shows simple human meshes and stiff procedural recovery. NPC/traffic behavior provisionally rises from 5.0 to 5.5, taking the weighted total to 5.25 (displayed 5.3), far short of 8.0. Local population distribution, stronger art and authored missions remain priorities.
+
+## 2026-10-21 — original-body doors and a usable Van cabin
+
+Replace door overlays with cached partitions of original skin, glass and hardware. Preserve normals/UVs, keep the roof/pillars fixed, add inward-facing liners and allow both front doors to open independently. Closed vehicles use the untouched original mesh; replacement meshes are created only when needed, follow body damage, and remain correctly masked through detail refreshes. Prepare glass shader variants alongside city materials before readiness. Exclude glass from police paint overrides. The Van now has transparent front windows, a hollow cabin, seats/floor and a forward-aligned POV; it remains a visibly simple box model.
+
+Update passenger/driver door alignment and tuck the rider's knees during transfer. Existing stationary front-left exits, passenger mission/save handling and the complete desktop/touch suite pass. New pure tests verify clip-area/UV preservation and liner winding; seven-model browser checks cover real lower/glass openings, the other side staying closed, independent doors, LOD, damage, bounded render cost, original closed cost and stable reuse. This resolves an obvious overlay artifact but does not provide authored vehicle interiors, physical door collision or a fully collision-solved character animation. Overall judgment remains 5.2/10; ambient character behavior, authored missions and richer street art are the next priorities.
+
+## 2026-10-21 — seated passengers and calibrated cabins
+
+The passenger remains visible while riding, using the same rig through crouch/slide boarding, seated motion and alighting. Share metre-based floor/seat/roof calibration between sedan/Civic interiors, the passenger pose and cockpit seats. Adjust knee angles to keep shoes on the floor, lower the actor before entering the roof envelope, and keep transfer feet above the road. A belt, subtle head motion/blinking and four bounded skin/clothing/hair palettes improve the participant's presentation without new actors or label textures. Shared NPC materials are reassigned, never recolored globally.
+
+The rider synchronizes after vehicle interpolation, inheriting heave/roll/pitch while the name label hides inside the cabin. Both cockpit and Driver POV keep their interior context. Save/restore now rebuilds the visible seated state. Twenty-one car/orientation geometry checks and 126 sampled transfer poses pass; a POV render A/B adds 19 calls / 1,386 triangles in the sampled view. Mission, full gameplay, 24 controller/preparation checks and the graphics/time-cycle diagnostic pass.
+
+Visual review still shows a basic human rig and simplified cabin art. Exterior front doors remain overlays on an uncut body, so complete articulated openings/glass are the next needed refinement. The overall provisional score stays 5.2; visible riders alone do not justify a GTA V quality claim.
+
+## 2026-10-21 — cold material preparation and stable night lighting
+
+Prepare registered world styles before dismissing the loading screen, using temporary hidden one-instance proxies and the composer's actual linear output target. Compiling screen-output variants did not warm the programs used by the game; the retained implementation matches the real render path. Proxies are removed/disposed, shared geometry/materials and cell membership remain intact, and shader failures propagate to the existing startup error flow. Simulation timing/input reset after preparation so loading work does not advance a saved activity.
+
+The prior 1,280 ms cold downtown frame falls to approximately 105 ms; 150 deduplicated proxies prepare five extra programs (51 → 56) in ~1,142 ms before readiness. The measured preset/day/night sequence then creates no programs or info-log queries. Keep the sun in the lighting list with zero intensity at night, stopping its shadow updates and shadow sampling without generating another program family. The strict one-second diagnostic now passes without excluding the cold frame or disabling shader diagnostics. Ordinary ~100 ms cold frames and overall initial loading latency remain limitations, and the overall rating stays 5.2.
+
+Three focused preparation checks cover target encoding, registry deduplication, shared-resource retention, streaming-state stability and cleanup on both driver exceptions and invalid shader diagnostics. Actual desktop/touch RAF, streaming lifetime and full gameplay tests pass; a forced preparation exception leaves Retry available and never marks the load ready. Day/night images were inspected. These remain results on one GTX 1650, not broad hardware certification.
+
+## 2026-10-21 — passenger job and verification correction
+
+Added a full passenger job: named waiting actor/label, separated curbside destinations, two-second stopped/aligned boarding and exiting with an animated right door, path checks against scenery and every vehicle, a comfort/time fare, actionable blocked-door feedback, failure conditions and safe stage/comfort persistence. One actor and label texture are reused across jobs. The rider is currently hidden while aboard; a proper seated pose/cabin presentation is a remaining quality gap. The mission raises interactivity provisionally to 5.5 and the weighted total to 5.20, still displayed as 5.2.
+
+Nine focused state-machine checks and the browser mission checks cover pickup/drop-off, driving penalties, payout once, cancellation/timeouts/pursuits/recovery/car abandonment, corrupt saves, resource reuse and three touch layouts. Navigation now sits inside the activity panel, clearing the fare/comfort display; portrait and landscape panels clear the map and driving controls.
+
+Visual review found that raw Windows CRLF line endings bypassed LF-only JavaScript fixture hooks. Normalize line endings and assert hook insertion in the passenger, character, sandbox and graphics tests. Repeated passenger/character/sandbox checks pass with the intended stopped loop. The normalized graphics diagnostic exposes a separate 1.28 s cold downtown High frame in shader info-log queries; retain it as a failure, not a hidden warm-up. A normalized real-loop preset repeat passes with 53 programs and no multi-second Low stall. The original before/after program-variant evidence remains historical evidence of a real blocking call, while the new normalized reports supersede claims about deterministic capture timing.
+
+## 2026-10-21 — preset-switch shader stall
+
+Reproduced a 14,566 ms first-Low render. Chrome's CPU profile attributes approximately 14,428 ms to the native `getProgramInfoLog` call; Low created 30 extra shader programs (53 → 83). This replaces the earlier unproven shader/driver attribution with direct timing evidence at the blocking call.
+
+Kept the sun's shadow-light shader configuration stable across presets. Low stops shadow updates, disposes the shadow render target and uses a uniform bias to reject shadow sampling; Medium/High restore normal bias, map size and updates. Shader error reporting remains enabled. The first Low render now measures 27.2 ms, with zero new compile/link/info-log calls and a stable count of 53 programs. High/Low captures were inspected for lighting and shadow restoration.
+
+Live RAF tests include every switch interval from before applying settings, with no warm-up exclusion. Both desktop and 390×844 touch-layout tests pass repeated High → Low → Medium → High → Low switches, stable program counts, map release/restoration and shader diagnostics. These are GTX 1650 results, including the touch-layout test; they do not establish actual phone performance. Performance provisionally rises to 6.0, putting the weighted assessment at 5.15 (rounded 5.2), still well short of the 8.0 target.
+
+## 2026-10-21 — character movement and chase camera
+
+Weaknesses: keyboard tank steering, diagonal/input inconsistency, broad circular car exclusions, automatic repeat jumping, foot sliding against obstacles and cameras passing through scenery.
+
+Added shared camera-relative movement, smooth starts/stops and facing changes, normalized diagonal input, analog speed, radius-aware wall sliding, rotated car collision/separation, single-press buffered jumping, distance-based gait, landing compression, static boom obstruction and saved on-foot heading. Instructions now distinguish keyboard and touch. Twelve controller checks cover directions/orbits, speed, braking, analog input, walls, rotated cars, jump height/repeat/buffering, blocked animation, camera clearance and safe car separation. Browser checks exercise real keyboard input, orbit-relative movement, touch, jump hold and saved heading, with desktop/phone captures.
+
+Self-assessment: the inspected character/world still looks rudimentary next to GTA V. Character movement provisionally rises from 3.5 to 4.5, moving the weighted score from 5.0 to 5.1. The user target is now 8.0; it has not been achieved. Broader authored art, mission depth, pedestrian behavior and the known preset warm-up stall remain meaningful gaps.
+
 ## 2026-10-20 — driving sandbox and vehicle presentation
 
 Added wanted heat, bounded police pursuit, paid jobs including Hot cargo, cash/health consequences, service transactions and local career progress. Replaced the coarse Kaze R/Sports shells with curved vehicle construction. Removed the nearby-car wireframe at the user's request while retaining the entry prompt.
