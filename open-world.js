@@ -20,7 +20,7 @@ class OpenWorld {
     const pane=document.getElementById('gp-activities');
     pane.querySelector('h2').textContent='Jobs & free roam';
     pane.insertAdjacentHTML('beforeend',`<section class="sandbox-menu"><h2>Your city, your rules</h2><p>Complete jobs for cash, thread traffic for near-miss bonuses, or take on Hot cargo. Crashes, pedestrian collisions and stealing occupied cars attract police. Break line of sight, then stay hidden until the search ends.</p><p id="career-stats"></p><h3>City services</h3><p>Stop at a marked entrance and press Q or use the on-screen button. Services are unavailable during a pursuit. Fuel stations offer a $40 roadside tune-up; fuel consumption is not simulated.</p><div class="gp-actions" id="service-routes"></div><p id="service-route-status">Choose a destination to mark it on the map.</p><button type="button" class="gp-button" id="clear-service-route" hidden>Clear destination</button></section>`);
-    for(const s of this.services){const b=document.createElement('button');b.type='button';b.className='gp-button';b.textContent=s.name;b.onclick=()=>{this.serviceTarget=s;this.renderMenu();this.game.notify(`${s.name} marked on the map. Stop at the entrance to use the service.`);};document.getElementById('service-routes').append(b);}
+    for(const s of this.services){const b=document.createElement('button');b.type='button';b.className='gp-button';b.textContent=s.name;b.onclick=()=>{if(this.game.story?.active){this.game.notify('Finish or abandon Last Light before choosing another destination.');return;}if(this.game.story)this.game.story.guide=false;this.serviceTarget=s;this.renderMenu();this.game.notify(`${s.name} marked on the map. Stop at the entrance to use the service.`);};document.getElementById('service-routes').append(b);}
     document.getElementById('clear-service-route').onclick=()=>{this.serviceTarget=null;this.renderMenu();};
     document.getElementById('service-action').onclick=()=>this.interact();
     document.getElementById('gp-controls').querySelector('dl').insertAdjacentHTML('beforeend','<dt>Use nearby service</dt><dd><kbd>Q</kbd></dd>');
@@ -126,7 +126,7 @@ class OpenWorld {
   respawn(reason) {
     if(this.game.transition)return;
     const fee=Math.min(this.cash,reason==='BUSTED'?250:150);this.cash-=fee;
-    if(this.game.activity)this.game.finishActivity(false,`${reason}. Job failed.`);
+    if(this.game.activity)this.game.finishActivity(false,`${reason}. Job failed.`);if(this.game.story?.active)this.game.story.finish(false,reason==='BUSTED'?'busted':'wasted');
     this.endPursuit();this.immunity=8;this.health=100;resetInput();
     const old=car;car=null;if(old){old.vx=old.vz=old.yr=0;old.policeActive=false;old.o.visible=true;this.game.lastVehicle=old;}
     const lot=structurePlan.lots.find(l=>l.kind===(reason==='BUSTED'?'police':'clinic'));
@@ -142,7 +142,7 @@ class OpenWorld {
     if(this.game.transition)return;
     if(this.heat>0){this.game.notify('Lose the police before using city services.',true);return;}
     if(car&&Math.hypot(car.vx,car.vz)>.6){this.game.notify('Stop the car before using this service.');return;}
-    if(this.game.activity){this.game.notify('Finish or cancel your job before using a service.');return;}
+    if(this.game.activity||this.game.story?.active){this.game.notify('Finish or cancel your job before using a service.');return;}
     const price=s.kind==='clinic'?75:s.kind==='workshop'?150:40;
     if(s.kind!=='clinic'&&!car){this.game.notify('Bring a car to use this service.');return;}
     if(s.kind==='clinic'?this.health>=100:car.dmg<1){this.game.notify(s.kind==='clinic'?'You are already healthy.':'This car does not need repairs.');return;}
@@ -192,7 +192,7 @@ class OpenWorld {
     document.getElementById('pursuit-status').textContent=this.bust>0?`BUSTING · Move! ${Math.max(0,5-this.bust).toFixed(1)}s`:this.seen?'IN PURSUIT · Break line of sight':`SEARCHING · Stay hidden ${Math.max(0,Math.ceil(18+this.stars*5-this.hidden))}s`;
     document.getElementById('escape-bar').value=this.hidden/(18+this.stars*5);
     this.service=this.nearbyService();
-    const button=document.getElementById('service-action');button.hidden=!this.service;
+    const button=document.getElementById('service-action');button.hidden=!this.service||!!this.game.story?.active;
     if(this.service){const s=this.service;button.textContent=`Q · ${s.kind==='clinic'?'Restore health · $75':s.kind==='workshop'?'Repair car · $150':'Tune-up · $40'}`;}
     const tip=document.getElementById('sandbox-tip');tip.textContent=this.serviceTarget?`${this.serviceTarget.name} · ${Math.round(Math.hypot(P.x-this.serviceTarget.x,P.z-this.serviceTarget.z))} m · gold map marker`:this.heat>0?'Police use sight. Buildings can hide you.':'Jobs pay $250–$1,800 · Menu → Activities';
   }
@@ -200,6 +200,7 @@ class OpenWorld {
     document.getElementById('career-stats').textContent=`$${Math.floor(this.cash).toLocaleString('en-US')} cash · $${Math.floor(this.earned).toLocaleString('en-US')} earned · ${this.escapes} pursuits escaped · ${(this.distance/1000).toFixed(1)} km driven`;
     document.getElementById('service-route-status').textContent=this.serviceTarget?`Destination: ${this.serviceTarget.name}. Follow the gold map marker.`:'Choose a destination to mark it on the map.';
     document.getElementById('clear-service-route').hidden=!this.serviceTarget;
+    for(const b of document.querySelectorAll('#service-routes button'))b.disabled=!!this.game.story?.active;
   }
   drawMini(ctx,scale) {
     ctx.save();

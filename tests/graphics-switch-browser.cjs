@@ -12,10 +12,10 @@ if(!/^[a-z0-9-]+$/i.test(label))throw Error('Use a simple alphanumeric report la
   const source=(await fs.readFile(path.join(root,'index.html'),'utf8')).replace(/\r\n/g,'\n').replace('<script>\nconst T=10',`<script>\n${live?'':'window.requestAnimationFrame=()=>0;'}let graphicsSeed=2026;Math.random=()=>{graphicsSeed=(Math.imul(graphicsSeed,1664525)+1013904223)>>>0;return graphicsSeed/4294967296};\nconst T=10`);
   assert.ok(source.includes('let graphicsSeed=2026'),'Seeded fixture hook missing');
   assert.equal(source.includes('window.requestAnimationFrame=()=>0'),!live,'Render-loop fixture mode mismatch');
-  await context.route('https://game.test/**',async route=>{const name=new URL(route.request().url()).pathname.slice(1);if(!name)return route.fulfill({body:source,contentType:'text/html'});if(/^[\w-]+\.(js|css)$/.test(name))return route.fulfill({body:await fs.readFile(path.join(root,name)),contentType:name.endsWith('css')?'text/css':'text/javascript'});return route.fulfill({status:204});});
+  await context.route('https://game.test/**',async route=>{const name=new URL(route.request().url()).pathname.slice(1);if(name==='assets/vehicles/1999_honda_civic_si.glb')return route.fulfill({body:await fs.readFile(path.join(root,name)),contentType:'model/gltf-binary'});if(!name)return route.fulfill({body:source,contentType:'text/html'});if(/^[\w-]+\.(js|css)$/.test(name))return route.fulfill({body:await fs.readFile(path.join(root,name)),contentType:name.endsWith('css')?'text/css':'text/javascript'});return route.fulfill({status:204});});
   await context.route(/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net)\//,async route=>{const file=path.join(root,'.test-tools','cdn-cache',new URL(route.request().url()).pathname.split('/').pop());try{return await route.fulfill({body:await fs.readFile(file),contentType:'text/javascript'});}catch{return route.continue();}});
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-  await page.goto('https://game.test/',{timeout:90000});await page.waitForFunction('gameplay?.sandbox');
+  await page.goto('https://game.test/',{timeout:90000});await page.waitForFunction('gameplay?.sandbox',null,{polling:50});
   const cdp=await context.newCDPSession(page);if(!live){await cdp.send('Profiler.enable');await cdp.send('Profiler.start');}
   await page.evaluate(live=>{
    window.glTimings={};window.slowGL=[];window.graphicsStage='setup';

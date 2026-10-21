@@ -14,6 +14,7 @@ def route(request):
     u=urlparse(request.request.url)
     if u.hostname=='game.test':
         if u.path=='/':request.fulfill(body=source,content_type='text/html')
+        elif u.path=='/assets/vehicles/1999_honda_civic_si.glb':request.fulfill(body=(root/u.path[1:]).read_bytes(),content_type='model/gltf-binary')
         elif u.path.endswith(('.js','.css')):
             request.fulfill(body=(root/u.path[1:]).read_bytes(),content_type='text/css' if u.path.endswith('.css') else 'text/javascript')
         else:request.fulfill(status=204,body='')
@@ -27,7 +28,7 @@ with sync_playwright() as p:
     try:
         page=browser.new_page(viewport={'width':1100,'height':720});page.route('**/*',route)
         errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
-        page.goto('https://game.test/',wait_until='load',timeout=60000);page.wait_for_function('gameplay!==null',timeout=60000)
+        page.goto('https://game.test/',wait_until='load',timeout=60000);page.wait_for_function('gameplay!==null',polling=50,timeout=60000)
         result=page.evaluate('''()=>{
           const check=(c,m)=>{if(!c)throw Error(m)},s=worldStream;
           check(s.stats.totalCells>20&&s.active.size<=12,'High detail chunk budget');

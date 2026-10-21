@@ -6,8 +6,8 @@ import {resolve} from 'node:path';
 
 export const WORLD_ID='coast-2026-v1';
 const root=new URL('./',import.meta.url);
-const files=new Set(['index.html','driving.css','multiplayer.css','multiplayer.js','gameplay.js','open-world.js','vehicle-dynamics.js','structures.js','traffic-signals.js','world-detail.js','world-streaming.js','vehicle-doors.js','pedestrian-ai.js','pedestrian-crowd.js','character-art.js']);
-const models=new Set(['Sports','Sedan','Van','Bike','Kaze R','Honda Civic FD 2009','Honda Civic FB 2013','Honda Civic SiR 1997']);
+const files=new Set(['index.html','driving.css','multiplayer.css','multiplayer.js','gameplay.js','open-world.js','vehicle-dynamics.js','structures.js','traffic-signals.js','world-detail.js','world-streaming.js','vehicle-doors.js','pedestrian-ai.js','pedestrian-crowd.js','character-art.js','story-mission.js','gltf-loader.js','imported-civic.js','assets/vehicles/1999_honda_civic_si.glb','vendor/three-LICENSE.txt']);
+const models=new Set(['Sports','Sedan','Van','Bike','Kaze R','Honda Civic FD 2009','Honda Civic FB 2013','Honda Civic SiR 1997','1999 Honda Civic Si']);
 const clean=(value,max)=>typeof value==='string'?value.replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g,'').trim().slice(0,max):'';
 const finite=(v,min,max)=>typeof v==='number'&&Number.isFinite(v)&&v>=min&&v<=max;
 const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
@@ -67,8 +67,8 @@ export function createGameServer({roomLimit=16,sessionLimit=128,sessionTTL=30000
       }
       if(!['GET','HEAD'].includes(req.method)){json(res,405,{error:'Method not allowed.'});return;}
       const file=path==='/'?'index.html':path.slice(1);if(!files.has(file)){res.writeHead(404);res.end('Not found');return;}
-      const content=await readFile(new URL(file,root)),type=file.endsWith('.html')?'text/html':file.endsWith('.css')?'text/css':'text/javascript';
-      res.writeHead(200,{'Content-Type':type+'; charset=utf-8','Cache-Control':'no-cache'});res.end(req.method==='HEAD'?undefined:content);
+      const content=await readFile(new URL(file,root)),type=file.endsWith('.html')?'text/html':file.endsWith('.css')?'text/css':file.endsWith('.glb')?'model/gltf-binary':file.endsWith('.txt')?'text/plain':'text/javascript';
+      res.writeHead(200,{'Content-Type':type+(file.endsWith('.glb')?'':'; charset=utf-8'),'Cache-Control':'no-cache'});res.end(req.method==='HEAD'?undefined:content);
     }catch(error){if(!res.headersSent)json(res,error.status||500,{error:error.status?error.message:'The server could not complete the request. Try again.'});else res.destroy();}
   });
   const timer=setInterval(()=>{

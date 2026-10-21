@@ -8,10 +8,10 @@ const root=path.resolve(__dirname,'..'),artifacts=path.join(root,'tests/artifact
   await context.addInitScript(()=>{window.passengerCheck=(ok,message)=>{if(!ok)throw Error(message);};});
   const source=(await fs.readFile(path.join(root,'index.html'),'utf8')).replace(/\r\n/g,'\n').replace('<script>\nconst T=10','<script>\nwindow.requestAnimationFrame=()=>0;let passengerSeed=2026;Math.random=()=>{passengerSeed=(Math.imul(passengerSeed,1664525)+1013904223)>>>0;return passengerSeed/4294967296};\nconst T=10');
   assert.ok(source.includes('window.requestAnimationFrame=()=>0'),'Deterministic fixture hook missing');
-  await context.route('https://game.test/**',async route=>{const name=new URL(route.request().url()).pathname.slice(1);if(!name)return route.fulfill({body:source,contentType:'text/html'});if(/^[\w-]+\.(js|css)$/.test(name))return route.fulfill({body:await fs.readFile(path.join(root,name)),contentType:name.endsWith('css')?'text/css':'text/javascript'});return route.fulfill({status:204});});
+  await context.route('https://game.test/**',async route=>{const name=new URL(route.request().url()).pathname.slice(1);if(name==='assets/vehicles/1999_honda_civic_si.glb')return route.fulfill({body:await fs.readFile(path.join(root,name)),contentType:'model/gltf-binary'});if(!name)return route.fulfill({body:source,contentType:'text/html'});if(/^[\w-]+\.(js|css)$/.test(name))return route.fulfill({body:await fs.readFile(path.join(root,name)),contentType:name.endsWith('css')?'text/css':'text/javascript'});return route.fulfill({status:204});});
   await context.route(/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net)\//,async route=>{try{return await route.fulfill({body:await fs.readFile(path.join(root,'.test-tools/cdn-cache',new URL(route.request().url()).pathname.split('/').pop())),contentType:'text/javascript'});}catch{return route.continue();}});
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-  await page.goto('https://game.test/',{timeout:90000});await page.waitForFunction('gameplay?.passengerJobs');
+  await page.goto('https://game.test/',{timeout:90000});await page.waitForFunction('gameplay?.passengerJobs',null,{polling:50});
   await fs.mkdir(artifacts,{recursive:true});
   await page.evaluate(()=>{
    window.passengerCheck=(ok,message)=>{if(!ok)throw Error(message);};const g=gameplay,s=g.sandbox;
@@ -28,7 +28,7 @@ const root=path.resolve(__dirname,'..'),artifacts=path.join(root,'tests/artifact
    passengerCheck(Math.hypot(a.targets[1].x-a.targets[0].x,a.targets[1].z-a.targets[0].z)>=130,'Distinct destination');
    window.passengerCash=g.sandbox.cash;g.save();return JSON.parse(JSON.stringify(a.targets[0]));
   });
-  await page.reload();await page.waitForFunction('gameplay?.passengerJobs');
+  await page.reload();await page.waitForFunction('gameplay?.passengerJobs',null,{polling:50});
   await page.evaluate(()=>{
    const g=gameplay,a=g.activity;passengerCheck(a?.kind==='taxi'&&a.index===0&&a.passenger.name==='Maya','Pickup stage restores');
    for(const v of cars)v.ai=null;
@@ -85,7 +85,7 @@ const root=path.resolve(__dirname,'..'),artifacts=path.join(root,'tests/artifact
   await page.evaluate(()=>{camMode=2;gameplay.updatePovCabin();passengerCheck(gameplay.povCabin.visible,'Occupied cockpit has interior context');camMode=0;yo=0;pt=.2;car.o.visible=true;gameplay.updatePovCabin();passengerRender();});
   await page.screenshot({path:path.join(artifacts,'passenger-seated-exterior.png')});
   const saved=await page.evaluate(()=>({comfort:gameplay.activity.passenger.comfort,cash:gameplay.sandbox.cash}));
-  await page.reload();await page.waitForFunction('gameplay?.passengerJobs');
+  await page.reload();await page.waitForFunction('gameplay?.passengerJobs',null,{polling:50});
   await page.evaluate(saved=>{
    const g=gameplay,a=g.activity;passengerCheck(a?.kind==='taxi'&&a.index===1&&g.passengerJobs.actor.seated&&g.passengerJobs.actor.g.visible&&Math.abs(a.passenger.comfort-saved.comfort)<1e-6,'Riding stage/comfort restore');
    for(const v of cars)v.ai=null;
@@ -110,7 +110,7 @@ const root=path.resolve(__dirname,'..'),artifacts=path.join(root,'tests/artifact
    g.startActivity('taxi');const v=car;car=null;g.updateActivity();passengerCheck(!g.activity&&!g.result.success,'Leaving booked car ends job');car=v;g.lastVehicle=v;
    g.startActivity('taxi');g.activity.passenger.comfort=999;g.save();
   },completed);
-  await page.reload();await page.waitForFunction('gameplay?.passengerJobs');
+  await page.reload();await page.waitForFunction('gameplay?.passengerJobs',null,{polling:50});
   assert.ok(await page.evaluate(()=>!gameplay.activity&&gameplay.result?.message.includes('invalid')),'Corrupt passenger save is rejected');
   await page.evaluate(()=>{for(const v of cars)v.ai=null;car.dmg=0;gameplay.sandbox.endPursuit();gameplay.startActivity('taxi');gameplay.hud();});
   for(const [width,height]of [[390,844],[320,740],[844,390]]){

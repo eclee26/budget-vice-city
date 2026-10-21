@@ -60,3 +60,10 @@ body #game-notice[data-urgent=true]{border-color:var(--warning)!important;color:
  body #activity-hud{left:calc(var(--map-left) + var(--map-size) + 8px);transform:none;width:min(300px,calc(100vw - var(--map-left) - var(--map-size) - 200px))}
  #activity-hud .gp-meter{flex-wrap:wrap}
 }
+
+/* Story uses the existing paused menu and compact objective panel. */
+body #controls-help .gp-tabs{grid-template-columns:repeat(6,minmax(0,1fr))}
+.story-speaker{color:var(--accent);font-weight:650}#story-dialogue{line-height:1.6;border-left:2px solid var(--accent);padding-left:12px}
+#story-action{min-height:44px;width:100%;margin-top:7px;border:1px solid var(--accent);border-radius:8px;background:#1d444c;color:var(--fg);font:inherit;font-size:11px;padding:6px}
+#story-cargo label{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:10px;margin:5px 0}#story-cargo progress{flex:1;min-width:40px;width:65px;height:6px;accent-color:var(--accent)}
+@media(max-width:600px){body #controls-help .gp-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}}

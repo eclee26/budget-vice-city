@@ -12,6 +12,7 @@ def route(request):
     u=urlparse(request.request.url)
     if u.hostname=='game.test':
         if u.path=='/':request.fulfill(body=source,content_type='text/html')
+        elif u.path=='/assets/vehicles/1999_honda_civic_si.glb':request.fulfill(body=(root/u.path[1:]).read_bytes(),content_type='model/gltf-binary')
         elif u.path.endswith(('.js','.css')):request.fulfill(body=(root/u.path[1:]).read_bytes(),content_type='text/css' if u.path.endswith('.css') else 'text/javascript')
         else:request.fulfill(status=204,body='')
     else:
@@ -23,7 +24,7 @@ with sync_playwright() as p:
     try:
         page=browser.new_page(viewport={'width':1280,'height':720});page.route('**/*',route);errors=[]
         page.on('pageerror',lambda e:errors.append(str(e)))
-        page.goto('https://game.test/',wait_until='load',timeout=60000);page.wait_for_function('gameplay!==null',timeout=60000)
+        page.goto('https://game.test/',wait_until='load',timeout=60000);page.wait_for_function('gameplay!==null',polling=50,timeout=60000)
         results=[]
         for quality,kind in [('high','coast'),('high','downtown'),('low','downtown')]:
             page.evaluate('''([quality,kind])=>{

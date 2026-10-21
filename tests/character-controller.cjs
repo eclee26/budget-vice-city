@@ -65,3 +65,9 @@ test('water prevents character traversal but does not obstruct the camera above 
  const s=setup({solid:()=>true});s.c.tile=()=>4;
  assert.equal(s.c.characterBlocked(0,0),true);s.c.constrainChaseCamera(0);assert.equal(s.c.cp.x,-5);
 });
+
+
+test('carried controller moves more slowly and keeps its front edge clear of walls',()=>{
+ const normal=setup(),carrying=setup();carrying.c.gameplay={story:{carrying:true,blocks:()=>false}};normal.keys.add('w');carrying.keys.add('w');normal.tick(120);carrying.tick(120);assert.ok(carrying.P.x/normal.P.x>.70&&carrying.P.x/normal.P.x<.80);
+ const wall=setup({solid:x=>x>=2});wall.c.gameplay={story:{carrying:true,blocks:()=>false}};wall.keys.add('w');wall.tick(120);assert.ok(wall.P.x<=1.501);
+});

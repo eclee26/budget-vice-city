@@ -26,7 +26,8 @@ def route(request):
     if url.hostname=='game.test':
         if url.path in ['/','/index.html']: request.fulfill(body=source,content_type='text/html')
         elif url.path=='/live.html': request.fulfill(body=(root/'index.html').read_text(encoding='utf-8'),content_type='text/html')
-        elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/character-art.js','/pedestrian-crowd.js','/pedestrian-ai.js','/vehicle-doors.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']: request.fulfill(body=(root/url.path[1:]).read_text(encoding='utf-8'),content_type='text/css' if url.path.endswith('.css') else 'text/javascript')
+        elif url.path=='/assets/vehicles/1999_honda_civic_si.glb': request.fulfill(body=(root/url.path[1:]).read_bytes(),content_type='model/gltf-binary')
+        elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/story-mission.js','/gltf-loader.js','/imported-civic.js','/character-art.js','/pedestrian-crowd.js','/pedestrian-ai.js','/vehicle-doors.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']: request.fulfill(body=(root/url.path[1:]).read_text(encoding='utf-8'),content_type='text/css' if url.path.endswith('.css') else 'text/javascript')
         else: request.fulfill(status=204,body='')
     elif args.assets and (args.assets/Path(url.path).name).exists():
         request.fulfill(body=(args.assets/Path(url.path).name).read_text(encoding='utf-8'),content_type='text/javascript')
@@ -65,7 +66,7 @@ def run_desktop(context):
     assert page.evaluate('gameplay.settings.resolution===60&&Math.abs(r.getPixelRatio()-.54)<.00001')
     page.locator('#fps-setting').check();page.evaluate('gameplay.frame(10000);gameplay.frame(10750)');assert page.locator('#fps-counter').is_visible()
     page.locator('#quality-setting').select_option('high');page.locator('#resolution-setting').fill('100');page.locator('#resolution-setting').dispatch_event('change')
-    assert page.evaluate('r.shadowMap.enabled&&sun.shadow.mapSize.x===2048&&Math.abs(aa.uniforms.inverseResolution.value.x-1/(innerWidth*r.getPixelRatio()))<1e-10')
+    assert page.evaluate('r.shadowMap.enabled&&sun.shadow.mapSize.x===2048&&Math.abs(aa.uniforms.inverseResolution.value.x-1/(innerWidth*r.getPixelRatio()))<1e-10'),page.evaluate('({shadow:r.shadowMap.enabled,size:sun.shadow.mapSize.x,aa:aa.uniforms.inverseResolution.value.x,expected:1/(innerWidth*r.getPixelRatio()),mobile:graphics.mobile,quality:gameplay.settings.quality,resolution:gameplay.settings.resolution})')
     render(page);page.screenshot(path=str(artifacts/'gameplay-settings.png'))
     page.locator('[data-pane="activities"]').click();page.locator('[data-activity="race"]').click();assert page.evaluate("!help.open&&gameplay.activity.kind==='race'")
     # Menu/hidden time never consumes a challenge timer.
@@ -170,7 +171,7 @@ def run_improvements(context):
     assert page.evaluate('car.dmg===105&&gameplay.activity.elapsed===7&&Math.hypot(car.vx,car.vz)===0&&tile(car.x,car.z)===1&&!blockedVehicle(car,car.x,car.z)&&!cars.some(v=>v!==car&&vehicleOverlap(car,v))')
     page.keyboard.press('Escape');steps(page,1);assert page.locator('#rpm-bar').is_visible()
     page.evaluate('gameplay.notify("Routine driving message")');assert page.evaluate('document.getElementById("game-notice").getBoundingClientRect().top>innerHeight/2')
-    page.evaluate('gameplay.save()');page.reload(wait_until='load');page.wait_for_function('gameplay!==null')
+    page.evaluate('gameplay.save()');page.reload(wait_until='load');page.wait_for_function('gameplay!==null',polling=50)
     assert page.evaluate("gameplay.settings.units==='mph'&&gameplay.settings.steering===1.25&&gameplay.settings.cameraSensitivity===1.5&&!gameplay.settings.blur&&!gameplay.settings.shake")
     render(page);page.screenshot(path=str(artifacts/'driving-improvements.png'));page.close()
     print('PASS improvements: entry prompt without wireframe, map, units, settings persistence, interpolation, recovery and instruments',flush=True)
@@ -195,7 +196,7 @@ def run_loading_failure(browser):
 
 def run_live_frames(browser):
     context=browser.new_context(viewport={'width':1000,'height':700});context.route('**/*',route)
-    page=context.new_page();watch(page);page.goto('https://game.test/live.html',wait_until='load');page.wait_for_function('gameplay!==null')
+    page=context.new_page();watch(page);page.goto('https://game.test/live.html',wait_until='load');page.wait_for_function('gameplay!==null',polling=50)
     page.keyboard.press('e');page.wait_for_function('!!car&&!gameplay.transition',timeout=60000)
     page.keyboard.down('w');page.wait_for_function('Math.hypot(car.vx,car.vz)>3',timeout=60000);page.keyboard.up('w')
     assert page.evaluate('gameplay.elapsed>1&&!!gameplay.visualPrevious&&gameplay.visualCurrent===null')
@@ -244,7 +245,7 @@ def run_pov(context):
     assert page.evaluate('gameplay.povCabin.visible&&!car.o.visible&&cam.fov===58')
     page.evaluate('''()=>{const eye=cam.position.clone().sub(car.o.position).applyQuaternion(car.o.quaternion.clone().invert());if(Math.abs(eye.x+.30*car.t.L/4.55)>.025||Math.abs(eye.z+.40*car.t.W/1.82)>.025)throw Error('POV not in driver seat');const old=zm;document.getElementById('world').dispatchEvent(new WheelEvent('wheel',{deltaY:120}));if(zm!==old)throw Error('POV zoom moved the seat');yo=.6;pt=.1;step();if(!Number.isFinite(cam.position.y))throw Error('Invalid look-around pose');}''')
     page.evaluate('''()=>{yo=pt=0;gameplay.settings.motion=false;car.st=.2;gameplay.updatePovCabin();if(Math.abs(gameplay.povWheel.rotation.x+1.8)>.001)throw Error('Steering wheel not animated');gameplay.save();}''')
-    page.reload(wait_until='load');page.wait_for_function('gameplay!==null');steps(page,1)
+    page.reload(wait_until='load');page.wait_for_function('gameplay!==null',polling=50);steps(page,1)
     assert page.evaluate('camMode===3&&cam.fov===58&&gameplay.povCabin.visible&&!gameplay.settings.motion')
     render(page);page.screenshot(path=str(artifacts/('driver-pov-mobile.png' if page.evaluate('navigator.maxTouchPoints>0') else 'driver-pov.png')))
     page.keyboard.press('h');page.locator('[data-pane="vehicle"]').click()

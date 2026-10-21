@@ -19,7 +19,8 @@ def route(request):
         else:request.continue_()
         return
     if url.path=='/':request.fulfill(body=source,content_type='text/html')
-    elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/character-art.js','/pedestrian-crowd.js','/pedestrian-ai.js','/vehicle-doors.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']:
+    elif url.path=='/assets/vehicles/1999_honda_civic_si.glb':request.fulfill(body=(root/url.path[1:]).read_bytes(),content_type='model/gltf-binary')
+    elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/story-mission.js','/gltf-loader.js','/imported-civic.js','/character-art.js','/pedestrian-crowd.js','/pedestrian-ai.js','/vehicle-doors.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']:
         request.fulfill(body=(root/url.path[1:]).read_text(encoding='utf-8'),content_type='text/css' if url.path.endswith('.css') else 'text/javascript')
     else:request.fulfill(status=204,body='')
 
@@ -28,7 +29,7 @@ with sync_playwright() as p:
     page=browser.new_page(viewport={'width':1440,'height':900});page.route('**/*',route);errors=[]
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
-    page.goto('https://game.test/',wait_until='load',timeout=60000);page.wait_for_function('gameplay!==null',timeout=60000)
+    page.goto('https://game.test/',wait_until='load',timeout=60000);page.wait_for_function('gameplay!==null',polling=50,timeout=60000)
     stats=page.evaluate('worldDetailStats');assert stats['trees']>30 and stats['grass']>200 and stats['facades']>100,stats
     assert stats['beachUmbrellas']>=8 and stats['lifeguardTowers']==2 and stats['sailboats']==3 and stats['busShelters']>=2,stats
     district=page.evaluate('''()=>{

@@ -4,7 +4,7 @@ const vehicleDoorCache=new Map(),vehicleDoorGlass=new Map();
 const vehicleDoorStats={prepared:0,cacheEntries:0,triangles:0,milliseconds:0};
 function vehicleDoorSpec(t,name){
   const van=name==='Van',roof=van?.4+t.H:t.civic?civicProfiles[t.civic].roof:1.49;
-  return{rear:van?.65:t.civic?-.195:-.18,front:van?2.30:t.civic?civicProfiles[t.civic].front-.10:1.08,bottom:van?.42:.28,top:roof-.03,inner:t.W*.33,outer:t.W*.7,hingeZ:t.W/2};
+  return{rear:t.imported?-.70:van?.65:t.civic?-.195:-.18,front:van?2.30:t.civic?civicProfiles[t.civic].front-.10:1.08,bottom:van?.42:.28,top:roof-.03,inner:t.W*.33,outer:t.W*.7,hingeZ:t.W/2};
 }
 function doorSourceRole(key){
   if(/curved-window|door-glass|sideglass/.test(key))return 2;

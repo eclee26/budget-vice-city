@@ -37,11 +37,12 @@
     }
 
     init() {
-      this.buildUI(); this.makeMarker(); this.makePovCabin(); this.sandbox=new OpenWorld(this);this.passengerJobs=new PassengerJobs(this); this.restore(); this.applySettings();if(car&&camMode===3)this.povCamera();this.updatePovCabin();
+      this.buildUI(); this.makeMarker(); this.makePovCabin(); this.sandbox=new OpenWorld(this);this.passengerJobs=new PassengerJobs(this);this.story=new StoryMission(this); this.restore(); this.applySettings();if(car&&camMode===3)this.povCamera();this.updatePovCabin();
       if(typeof CityMultiplayer==='function')this.multiplayer=new CityMultiplayer(this);
       this.bind(); updateHud(); this.renderMenu();
       $('boot-status').textContent='Getting the city ready for your first drive…';
       worldStream.prepareMaterials(r,cam,comp?.readBuffer||null);simLast=performance.now();simAccumulator=0;resetInput();window.gameBoot?.ready();
+      this.initialized=true;
       window.addEventListener('pagehide', () => this.save());
       document.addEventListener('visibilitychange', () => { if(document.hidden) this.save(); });
       window.addEventListener('storage', event => {
@@ -72,12 +73,12 @@
         <section id="gp-activities" class="gp-pane"><h2>Take a drive</h2><p id="activity-status" role="status">Enter a stopped car, then choose an activity. Checkpoints appear in the world and on the minimap.</p>${Object.entries(activities).map(([id,a])=>`<article class="gp-activity"><div><h3>${a.name}</h3><p>${a.description}</p><small id="best-${id}">No best time yet</small></div><button type="button" class="gp-button gp-primary" data-activity="${id}">Start</button></article>`).join('')}<button type="button" id="cancel-activity" class="gp-button" hidden>Cancel activity</button></section>
         <section id="gp-vehicle" class="gp-pane" hidden><h2>Vehicle</h2><p id="vehicle-menu-status">Enter a stopped car to use vehicle controls.</p><div class="gp-actions"><button type="button" id="vehicle-toggle" class="gp-button">Enter nearby car</button><button type="button" id="menu-camera" class="gp-button">Camera: Chase</button><button type="button" id="recover-vehicle" class="gp-button">Recover vehicle</button><button type="button" id="menu-lights" class="gp-button">Lights: Auto</button><button type="button" id="signal-left" class="gp-button" aria-pressed="false">Left signal · Z</button><button type="button" id="signal-right" class="gp-button" aria-pressed="false">Right signal · X</button><button type="button" id="signal-hazard" class="gp-button" aria-pressed="false">Hazards · V</button></div><p>Stop before entering or leaving a car. Recover vehicle moves your current or last car to a clear nearby road without repairing damage or resetting activity time.</p></section>
         <section id="gp-settings" class="gp-pane" hidden><h2>Settings</h2><fieldset class="gp-fields"><legend>Graphics and feedback</legend><label class="gp-row" for="quality-setting">Graphics preset<select id="quality-setting"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label><label class="gp-row gp-range" for="resolution-setting">Render scale <output id="resolution-value">100%</output><input id="resolution-setting" type="range" min="50" max="100" step="5" value="100"></label><label class="gp-row" for="fps-setting">Show FPS<input id="fps-setting" type="checkbox"></label><label class="gp-row" for="motion-setting">Suspension and camera lean<input id="motion-setting" type="checkbox"></label><label class="gp-row" for="shake-setting">Camera shake<input id="shake-setting" type="checkbox"></label><label class="gp-row" for="blur-setting">Motion blur<input id="blur-setting" type="checkbox"></label><label class="gp-row" for="units-setting">Speed units<select id="units-setting"><option value="kmh">km/h</option><option value="mph">MPH</option></select></label><label class="gp-row gp-range" for="steering-setting">Steering sensitivity<output id="steering-value">100%</output><input id="steering-setting" type="range" min="50" max="150" step="5" value="100"></label><label class="gp-row gp-range" for="camera-setting">Camera sensitivity<output id="camera-value">100%</output><input id="camera-setting" type="range" min="25" max="200" step="5" value="100"></label></fieldset><p>Lower the preset or render scale if the game feels slow. Menus remain crisp at every render scale.</p><fieldset class="gp-fields gp-population"><legend>World population</legend><p id="population-help">Changes apply immediately. Higher populations use more processing power. Traffic controls moving cars; parked cars stay available.</p><label class="gp-row gp-range" for="pedestrians-setting">Pedestrians<output id="pedestrians-value" for="pedestrians-setting">64</output><input id="pedestrians-setting" type="range" min="0" max="128" step="8" value="64" aria-describedby="population-help"></label><label class="gp-row gp-range" for="traffic-setting">Traffic cars<output id="traffic-value" for="traffic-setting">24</output><input id="traffic-setting" type="range" min="0" max="48" step="2" value="24" aria-describedby="population-help"></label></fieldset><p id="population-status" role="status" aria-live="polite"></p><div class="gp-save"><h2>Progress</h2><p id="save-status"></p><button type="button" id="save-progress" class="gp-button">Save this drive</button><p>Location, chosen car, settings, best times and active activity are saved here. Your car resumes at a standstill. No account is needed.</p></div></section>`);
-      help.append(controls);
+      help.append(controls);const importedButton=document.createElement('button');importedButton.type='button';importedButton.className='gp-button';importedButton.id='locate-imported-civic';importedButton.textContent='Find 1999 Civic Si';$('gp-vehicle').append(importedButton);$('gp-vehicle').insertAdjacentHTML('beforeend','<p>1999 Civic Si model by <a href="https://sketchfab.com/ddiaz-design" target="_blank" rel="noopener noreferrer">Ddiaz Design</a> · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a>.</p>');importedButton.onclick=()=>{const v=cars.find(v=>v.n===ImportedCivic.name);if(!v)return;if(this.story?.active){this.notify('Finish or abandon Last Light before choosing another destination.');return;}if(this.story)this.story.guide=false;this.sandbox.serviceTarget={x:v.x,z:v.z,name:ImportedCivic.name};help.close();this.hud();this.notify('1999 Civic Si marked in gold on the map.');};
       $('engine-status').insertAdjacentHTML('afterend','<progress id="rpm-bar" max="1" value="0" aria-label="Engine speed"></progress><div id="vehicle-signals" aria-label="Vehicle lights and signals"></div>');
       $('mm').insertAdjacentHTML('afterend','<button id="map-toggle" class="help-button" aria-controls="mm" aria-expanded="false" title="Enlarge map (G)">Map</button><output id="heading-status" aria-label="Heading">N</output><button id="interaction-prompt" hidden></button><div id="target-direction" hidden><span aria-hidden="true">➤</span><small></small></div>');
       $('h').append($('interaction-prompt'));
       $('vehicle-hud').insertAdjacentHTML('beforeend','<div class="gp-quick"><button type="button" id="horn-control" title="Horn (B)">Horn · B</button><button type="button" id="lights-control" title="Headlights (L)">Lights: Auto</button></div>');
-      document.body.insertAdjacentHTML('beforeend','<section id="activity-hud" aria-label="Current driving activity" hidden><strong id="activity-name"></strong><p id="activity-target"></p><div id="passenger-status" hidden><div class="passenger-summary"><span id="passenger-name"></span><strong id="passenger-fare"></strong></div><label class="passenger-comfort">Comfort <progress id="passenger-comfort" max="100" value="100" aria-label="Passenger comfort"></progress><span id="passenger-comfort-value">100%</span></label></div><div class="gp-meter"><span id="activity-time"></span><button type="button" id="activity-menu">Menu</button></div></section><output id="fps-counter" aria-label="Rendering frame rate" hidden>— FPS</output><div id="game-notice" role="status" aria-live="polite" hidden></div>');
+      document.body.insertAdjacentHTML('beforeend','<section id="activity-hud" aria-label="Current objective" hidden><strong id="activity-name"></strong><p id="activity-target"></p><div id="passenger-status" hidden><div class="passenger-summary"><span id="passenger-name"></span><strong id="passenger-fare"></strong></div><label class="passenger-comfort">Comfort <progress id="passenger-comfort" max="100" value="100" aria-label="Passenger comfort"></progress><span id="passenger-comfort-value">100%</span></label></div><div class="gp-meter"><span id="activity-time"></span><button type="button" id="activity-menu">Menu</button></div></section><output id="fps-counter" aria-label="Rendering frame rate" hidden>— FPS</output><div id="game-notice" role="status" aria-live="polite" hidden></div>');
       $('activity-hud').append($('target-direction'));
     }
 
@@ -86,7 +87,7 @@
       for(const button of help.querySelectorAll('[data-pane]')) button.onclick=()=>this.showPane(button.dataset.pane);
       for(const button of help.querySelectorAll('[data-activity]')) button.onclick=()=>this.startActivity(button.dataset.activity);
       $('cancel-activity').onclick=()=>this.finishActivity(false,'Activity cancelled.');
-      $('activity-menu').onclick=()=>{this.showPane('activities');openHelp();};
+      $('activity-menu').onclick=()=>{this.showPane(this.story?.target()&&!this.activity?'story':'activities');openHelp();};
       $('map-toggle').onclick=()=>this.toggleMap();
       $('interaction-prompt').onclick=()=>this.act();
       $('menu-camera').onclick=()=>cyc();
@@ -113,7 +114,7 @@
     }
 
     showPane(name) {
-      if(!['activities','vehicle','settings','controls','online'].includes(name)) return;
+      if(!['activities','vehicle','settings','controls','online','story'].includes(name)) return;
       this.pane=name;
       for(const pane of help.querySelectorAll('.gp-pane')) pane.hidden=pane.id!==`gp-${name}`;
       for(const button of help.querySelectorAll('[data-pane]')){button.setAttribute('aria-pressed',String(button.dataset.pane===name));button.setAttribute('aria-controls',`gp-${button.dataset.pane}`);}
@@ -121,13 +122,13 @@
     }
     menuOpened() { this.showPane(this.pane);$('menu-feedback').textContent='Game paused. Choose a section.'; }
     renderMenu() {
-      this.sandbox?.renderMenu();
+      this.sandbox?.renderMenu();this.story?.renderMenu();
       for(const [kind,a] of Object.entries(activities)) {
         const n=this.completed[kind]||0;
         $(`best-${kind}`).textContent=this.best[kind]!==undefined?`Best ${clock(this.best[kind])} · ${n} completed`:'No best time yet';
-        help.querySelector(`[data-activity="${kind}"]`).disabled=!car||!!this.transition||!!this.activity;
+        help.querySelector(`[data-activity="${kind}"]`).disabled=!car||!!this.transition||!!this.activity||!!this.story?.active;
       }
-      $('activity-status').textContent=this.activity?`${activities[this.activity.kind].name} is paused. Resume driving or cancel it below.`:this.result?.message||(!car?'Enter a stopped car, then choose an activity.':'Choose an activity. Follow the cyan checkpoint and minimap marker.');
+      $('activity-status').textContent=this.story?.active?'Last Light is active. Continue in Story.':this.activity?`${activities[this.activity.kind].name} is paused. Resume driving or cancel it below.`:this.result?.message||(!car?'Enter a stopped car, then choose an activity.':'Choose an activity. Follow the cyan checkpoint and minimap marker.');
       $('cancel-activity').hidden=!this.activity;
       $('vehicle-toggle').textContent=car?'Exit vehicle':'Enter nearby car';
       $('menu-camera').disabled=!car||!!this.transition;
@@ -145,7 +146,7 @@
     notify(message,urgent=false) { $('game-notice').dataset.urgent=String(urgent);if(help.open){$('menu-feedback').textContent=message;return;}$('game-notice').textContent=message;$('game-notice').hidden=false;this.noticeUntil=performance.now()+3800; }
 
     key(key,event) {
-      if(key==='q'){event.preventDefault();if(!event.repeat)this.sandbox.interact();return true;}
+      if(key==='q'){event.preventDefault();if(!event.repeat&&!this.story.interact())this.sandbox.interact();return true;}
       if(key==='g'){event.preventDefault();if(!event.repeat)this.toggleMap();return true;}
       const actions={b:()=>this.horn(),l:()=>this.toggleLights(),z:()=>this.signal(-1),x:()=>this.signal(1),v:()=>this.signal(2)};
       if(!actions[key]) return false;
@@ -229,6 +230,7 @@
       candidates.sort((a,b)=>a.d-b.d);
       const point=candidates.find(p=>this.clearFootprint(p,v.t)&&!cars.some(o=>o!==v&&vehicleOverlap({...v,...p},o))&&(!car?Math.hypot(p.x-P.x,p.z-P.z)>v.t.L*.6:true));
       if(!point){this.notify('No clear road nearby. Try again after traffic moves.',true);return;}
+      if(this.story?.active&&this.story.vehicle===v)this.story.finish(false,'recovered');
       if(this.activity?.kind==='taxi')this.finishActivity(false,'Passenger job ended: the booked car was recovered.');
       Object.assign(v,{x:point.x,z:point.z,a:point.a,vx:0,vz:0,yr:0,ax:0,ay:0,st:0,roll:0,pitch:0,rollV:0,pitchV:0,heave:0,heaveVelocity:0,thr:0,brk:0,hold:0,g:1,contacts:null,ai:null});
       v.o.position.set(v.x,0,v.z);v.o.rotation.set(0,-v.a,0);
@@ -258,13 +260,13 @@
     navigationHud() {
       const degrees=((P.a*180/PI+90)%360+360)%360,headings=['N','NE','E','SE','S','SW','W','NW'];$('heading-status').textContent=headings[Math.round(degrees/45)%8]+' '+Math.round(degrees)+'°';
       const prompt=$('interaction-prompt');prompt.hidden=!!this.transition||!!car;
-      if(!prompt.hidden){const v=this.nearbyCar();if(v){const available=!!this.exitPoint(v,1);prompt.textContent=available?(document.body.classList.contains('touch-enabled')?'Enter '+v.n:'E · Enter '+v.n):v.n+' · Both sides blocked';prompt.disabled=!available;}
+      if(!prompt.hidden){const v=this.nearbyCar();if(v){const available=!!this.exitPoint(v,1);prompt.textContent=available?(document.body.classList.contains('touch-enabled')?'Enter '+v.n:'E · Enter '+v.n):v.n+' · Both sides blocked';prompt.disabled=!available;if(this.story?.carrying){prompt.textContent='Load controller at the rear first · Q';prompt.disabled=true;}else if(this.story?.active&&this.story.vehicle&&v!==this.story.vehicle){prompt.textContent='Return to the car carrying the controller';prompt.disabled=true;}}
         else {prompt.hidden=true;}}
       if(car){$('rpm-bar').value=clamp((car.rpm||900)/car.t.red,0,1);$('rpm-bar').dataset.redline=String(car.rpm>car.t.red*.9);$('rpm-bar').setAttribute('aria-valuetext',Math.round(car.rpm||900)+' RPM');
         $('vehicle-signals').textContent=(car.ind===2?'◀ Hazards ▶':car.ind===-1?'◀ Left signal':car.ind===1?'Right signal ▶':'Signals off')+' · '+(this.lightLevel(car)>.3?'Lights on':'Lights off');
       }
       document.querySelector('.unit').textContent=this.settings.units==='mph'?'MPH':'km/h';
-      const direction=$('target-direction'),target=this.activity&&!this.activity.escape?this.activity.targets[this.activity.index]:null;direction.hidden=!target||help.open;
+      const direction=$('target-direction'),target=this.activity&&!this.activity.escape?this.activity.targets[this.activity.index]:this.story?.target();direction.hidden=!target||help.open;
       if(target&&!help.open){cam.updateMatrixWorld();const point=new THREE.Vector3(target.x,1,target.z).project(cam),inView=point.z>-1&&point.z<1&&Math.abs(point.x)<.82&&Math.abs(point.y)<.72;
         direction.hidden=inView;if(!inView){const bearing=Math.atan2(target.z-P.z,target.x-P.x),view=camMode?P.a+yo:ca+yo,angle=wrap(bearing-view);direction.querySelector('span').style.transform='rotate('+(angle*180/PI-90)+'deg)';direction.querySelector('small').textContent='Target · '+Math.round(Math.hypot(target.x-P.x,target.z-P.z))+' m';}
       }
@@ -298,6 +300,7 @@
       if(!v||speed(v)>=1){this.notify(car?'Stop before leaving the car.':'Move closer to a stopped car.');return;}
       const rightX=-Math.sin(v.a),rightZ=Math.cos(v.a),side=exiting?-1:((P.x-v.x)*rightX+(P.z-v.z)*rightZ<0?-1:1),point=this.exitPoint(v,side,exiting);
       if(!point){this.notify(exiting?'The front-left door is blocked. Move the car or use Recover vehicle.':'Both sides are blocked. Try another car.',true);return;}
+      if(!exiting&&!this.story.beforeEnter(v))return;
       if(!exiting&&(v.ai||v.policeActive))this.sandbox.crime(v.police?2:1,'Vehicle theft reported');
       v.policeActive=false;v.ai=null;v.vx=v.vz=v.yr=0;
       if(v.thr!=null)v.thr=v.brk=v.hold=0;
@@ -323,7 +326,7 @@
     tick() {
       this.elapsed+=DT;this.saveTimer+=DT;pedestrianPopulation.tick(peds,cars,P,DT);
       this.sandbox.tick();
-      this.passengerJobs.tick();
+      this.passengerJobs.tick();this.story.tick();
       if(car){this.syncLights(car);if(this.lastGear!==null&&car.g!==this.lastGear&&speed(car)>2)this.sound('shift');this.lastGear=car.g;
         if(car.ind===-1||car.ind===1){if(Math.abs(wrap(car.a-(car.signalAngle??car.a)))>.35)car.signalTurned=true;if(car.signalTurned&&Math.abs(car.st)<.05)car.ind=0;}
       }else this.lastGear=null;
@@ -379,15 +382,15 @@
       const tx=motion?clamp(-(v.ax||0)*.002,-.018,.018):0,tz=motion?clamp(-(v.ay||0)*.002,-.018,.018):0;
       response.x+=(tx-response.x)*.12;response.z+=(tz-response.z)*.12;
       if(!motion)response.x=response.z=0;
-      this.povEye.set((v.n==='Van'?1.4:0)+(bike?-.2:-.30)*scaleX+response.x,bike?1.55:1.32*scaleY,(bike?0:-.40*scaleZ)+response.z).applyQuaternion(v.o.quaternion).add(v.o.position);
+      this.povEye.set((v.n==='Van'?1.4:0)+(bike?-.2:-.30)*scaleX+response.x,bike?1.55:v.importedView?1.13:1.32*scaleY,(bike?0:-.40*scaleZ)+response.z).applyQuaternion(v.o.quaternion).add(v.o.position);
       cam.position.copy(this.povEye);const yaw=v.a+clamp(yo,-1.45,1.45),pitch=clamp(pt,-.3,.65)*.65+.015;
       this.povLook.set(cam.position.x+Math.cos(yaw)*20,cam.position.y-Math.tan(pitch)*20,cam.position.z+Math.sin(yaw)*20);cam.lookAt(this.povLook);
       if(motion)cam.rotateZ(clamp(-v.roll*.22,-.018,.018));
       cam.fov=58;cam.updateProjectionMatrix();cp.copy(cam.position);
     }
     updatePovCabin() {
-      this.passengerJobs?.syncVisual();
-      this.povCabin.visible=!!car&&(camMode===3||camMode===2);if(!this.povCabin.visible)return;
+      this.passengerJobs?.syncVisual();this.story?.syncVisual();
+      this.povCabin.visible=!!car&&!car.importedView&&(camMode===3||camMode===2);if(!this.povCabin.visible)return;
       const v=car,bike=v.n==='Bike',offset=v.n==='Van'?1.4:0;this.povCabin.position.set(offset,0,0).applyQuaternion(v.o.quaternion).add(v.o.position);this.povCabin.quaternion.copy(v.o.quaternion);this.povCabin.scale.set(bike?1:v.t.L/4.55,v.n==='Van'?1.55:v.n==='Kaze R'?1.08:1,bike?1:v.t.W/1.82);
       this.povInterior.visible=!bike;this.povBike.visible=bike;this.povWheel.rotation.x=-v.st*9;this.povBike.rotation.y=-v.st*.35;
       if(!bike){const layout=cabinSeating(v.t,v.n),sx=this.povCabin.scale.x,sy=this.povCabin.scale.y,sz=this.povCabin.scale.z;this.povFloor.position.y=layout.floor/sy-.0225;for(const {seat,side}of this.povSeats){seat.position.set((layout.x-offset)/sx,layout.hip/sy,side*layout.z/sz);seat.scale.set(1/sx,1/sy,1/sz);}}
@@ -430,7 +433,7 @@
     }
 
     startActivity(kind) {
-      if(!activities[kind]||this.activity)return;
+      if(!activities[kind]||this.activity||this.story?.active)return;
       if(!car||this.transition){$('activity-status').textContent='Enter a stopped car before starting an activity.';return;}
       if(car.dmg>150){$('activity-status').textContent='This car’s engine is disabled. Choose another car before starting.';return;}
       if(kind==='taxi'&&(car.n==='Bike'||100-Math.round(car.dmg/1.5)<40||this.sandbox.heat>0)){$('activity-status').textContent='Passenger rides need a car with at least 40% condition and no wanted level.';return;}
@@ -477,10 +480,10 @@
       }
       $('horn-control').disabled=!car||!!this.transition;$('lights-control').disabled=!car||!!this.transition;
       const mode=car?.lightsMode||'auto';$('lights-control').textContent=`Lights: ${mode[0].toUpperCase()+mode.slice(1)}`;
-      if(help.open)this.renderMenu();
+      if(help.open)this.renderMenu();this.story?.hud();
     }
     drawMini(ctx,scale) {
-      this.sandbox.drawMini(ctx,scale);this.multiplayer?.drawMini(ctx,scale);
+      this.sandbox.drawMini(ctx,scale);this.multiplayer?.drawMini(ctx,scale);this.story?.drawMini(ctx,scale);
       const a=this.activity;if(!a)return;ctx.save();ctx.strokeStyle='#76e4e1';ctx.lineWidth=1;ctx.globalAlpha=.7;ctx.beginPath();a.trace.forEach((p,i)=>i?ctx.lineTo(p.x*scale,p.z*scale):ctx.moveTo(p.x*scale,p.z*scale));ctx.stroke();const t=a.targets[a.index];ctx.globalAlpha=1;ctx.fillStyle='#76e4e1';ctx.beginPath();ctx.arc(t.x*scale,t.z*scale,3,0,PI*2);ctx.fill();ctx.restore();
     }
 
@@ -491,7 +494,7 @@
     snapshot() {
       const vehicle=car||this.lastVehicle;
       return{version:1,session:this.session,savedAt:Date.now(),position:{x:P.x,z:P.z,a:P.a},driving:!!car,vehicle:vehicle?{name:vehicle.n,x:vehicle.x,z:vehicle.z,a:vehicle.a,dmg:vehicle.dmg,lights:vehicle.lightsMode||'auto'}:null,
-        camera:{mode:camMode,zoom:zm,heading:ca+yo},settings:{...this.settings},best:{...this.best},completed:{...this.completed},sandbox:this.sandbox.snapshot(),activity:this.activity?JSON.parse(JSON.stringify(this.activity)):null,timeOfDay:tod};
+        camera:{mode:camMode,zoom:zm,heading:ca+yo},settings:{...this.settings},best:{...this.best},completed:{...this.completed},sandbox:this.sandbox.snapshot(),story:this.story.snapshot(),activity:this.activity?JSON.parse(JSON.stringify(this.activity)):null,timeOfDay:tod};
     }
     save(manual=false) {
       if(this.transition){if(manual)this.notify('Wait for the vehicle interaction to finish, then save.');return false;}
@@ -527,8 +530,9 @@
       }
       if(a?.kind==='taxi'&&!this.activity)this.result={kind:'taxi',success:false,message:'The saved passenger job was invalid and has been cancelled. No fare paid.'};
       if(this.activity?.kind==='getaway'){this.activity.escape=a.escape===true;if(this.activity.escape)this.marker.visible=false;this.sandbox.heat=Math.max(2,this.sandbox.heat);}
+      this.story.restore(data.story);
       cp.set(P.x-Math.cos(ca+yo)*8,4,P.z-Math.sin(ca+yo)*8);cam.position.copy(cp);cam.lookAt(P.x,1.5,P.z);this.lastSave=finite(data.savedAt)?data.savedAt:0;this.storageMessage='Your saved drive has been restored. Autosave is on.';
     }
   }
-  gameplay=new DrivingGame();gameplay.init();
+  (async()=>{const ready=await ImportedCivic.load();for(const v of cars)if(v.t.imported)ImportedCivic.attach(v);gameplay=new DrivingGame();gameplay.init();if(!ready)gameplay.notify('The imported Civic model could not load. A simplified car is available; reload to retry.',true);})().catch(error=>{console.error(error);window.gameBoot?.fail();});
 })();

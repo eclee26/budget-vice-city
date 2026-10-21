@@ -75,7 +75,7 @@ class AmbientPedestrians{
     }
     return best;
   }
-  tick(peds,cars,player,dt){
+  tick(peds,cars,player,dt,extras=[]){
     this.time+=dt;this.grid.clear();this.active.clear();for(const key of Object.keys(this.stats))this.stats[key]=0;
     for(const p of peds){this.active.add(p);if(!p.ambient)this.reset(p);const key=Math.floor(p.x/3)+','+Math.floor(p.z/3);if(!this.grid.has(key))this.grid.set(key,[]);this.grid.get(key).push(p);}
     for(const p of peds){
@@ -103,7 +103,7 @@ class AmbientPedestrians{
       if(state.mode==='flee'&&this.time>=state.until){p.fl=0;this.resume(p);}
       if(state.partner&&(!this.active.has(state.partner)||state.partner.dn||state.partner.ambient?.partner!==p))this.resume(p);
       if(['talk','look','stretch','greet','recover'].includes(state.mode)&&this.time>=state.until)this.resume(p);
-      const neighbors=this.nearby(p);if(player&&Math.hypot(player.x-p.x,player.z-p.z)<3.5)neighbors.push(player);
+      const neighbors=this.nearby(p);for(const extra of extras)if(Math.hypot(extra.x-p.x,extra.z-p.z)<3.5)neighbors.push(extra);if(player&&Math.hypot(player.x-p.x,player.z-p.z)<3.5)neighbors.push(player);
       if(state.mode==='walk'){
         if(player&&this.time>=state.nextGreeting&&Math.hypot(player.x-p.x,player.z-p.z)>1.1&&Math.hypot(player.x-p.x,player.z-p.z)<3.3&&Math.hypot(player.vx||0,player.vz||0)<.035&&Math.cos(Math.atan2(player.z-p.z,player.x-p.x)-p.a)>.1){
           state.mode='greet';state.until=this.time+.85;state.nextGreeting=this.time+18;state.look={x:player.x,z:player.z};state.lookUntil=this.time+1.3;

@@ -30,14 +30,15 @@ def route(request):
         else:request.continue_()
         return
     if url.path=='/':request.fulfill(body=source,content_type='text/html')
-    elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/character-art.js','/pedestrian-crowd.js','/pedestrian-ai.js','/vehicle-doors.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']:
+    elif url.path=='/assets/vehicles/1999_honda_civic_si.glb':request.fulfill(body=(root/url.path[1:]).read_bytes(),content_type='model/gltf-binary')
+    elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/story-mission.js','/gltf-loader.js','/imported-civic.js','/character-art.js','/pedestrian-crowd.js','/pedestrian-ai.js','/vehicle-doors.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']:
         request.fulfill(body=read_source(url.path[1:]),content_type='text/css' if url.path.endswith('.css') else 'text/javascript')
     else:request.fulfill(status=204,body='')
 
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH'),headless=True,args=['--no-sandbox','--enable-unsafe-swiftshader'])
     page=browser.new_page(viewport={'width':1000,'height':700});page.route('**/*',route)
-    page.goto('https://game.test/',wait_until='load');page.wait_for_function('gameplay!==null')
+    page.goto('https://game.test/',wait_until='load');page.wait_for_function('gameplay!==null',polling=50)
     result=page.evaluate('''mode=>{
       if(mode==='driving'){car=cars[0];car.ai=null;P.o.visible=false;}else{car=null;P.o.visible=true;}k.w=1;gameplay.settings.quality='low';gameplay.applySettings();
       for(let i=0;i<120;i++)step();

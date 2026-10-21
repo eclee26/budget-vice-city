@@ -19,7 +19,8 @@ def route(request):
         else:request.continue_()
         return
     if url.path=='/':request.fulfill(body=source,content_type='text/html')
-    elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/character-art.js','/pedestrian-crowd.js','/pedestrian-ai.js','/vehicle-doors.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']:
+    elif url.path=='/assets/vehicles/1999_honda_civic_si.glb':request.fulfill(body=(root/url.path[1:]).read_bytes(),content_type='model/gltf-binary')
+    elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/story-mission.js','/gltf-loader.js','/imported-civic.js','/character-art.js','/pedestrian-crowd.js','/pedestrian-ai.js','/vehicle-doors.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']:
         request.fulfill(body=(root/url.path[1:]).read_text(encoding='utf-8'),content_type='text/css' if url.path.endswith('.css') else 'text/javascript')
     else:request.fulfill(status=204,body='')
 
@@ -28,7 +29,7 @@ with sync_playwright() as p:
     browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH'),headless=True,args=['--enable-unsafe-swiftshader'])
     page=browser.new_page(viewport={'width':1280,'height':720});page.route('**/*',route)
     errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-    page.goto('https://game.test/',wait_until='load');page.wait_for_function('gameplay!==null')
+    page.goto('https://game.test/',wait_until='load');page.wait_for_function('gameplay!==null',polling=50)
     result=page.evaluate("""()=>{
       if(ROAD.sidewalk!==3.2||peds.length!==64||cars.filter(v=>v.ai).length!==24)throw Error('Population/width target missing');
       if(sidewalkRoutes.length<20)throw Error('Too few continuous sidewalk routes');
@@ -50,7 +51,7 @@ with sync_playwright() as p:
       return{sidewalkWidth:ROAD.sidewalk,pedestrians:peds.length,cars:cars.length,sidewalkWalkers:walkers.length,routes:sidewalkRoutes.length,moved};
     }""")
     page.screenshot(path=str(artifacts/'population-sidewalk.png'))
-    page.reload(wait_until='load');page.wait_for_function('gameplay!==null')
+    page.reload(wait_until='load');page.wait_for_function('gameplay!==null',polling=50)
     traffic=page.evaluate("""()=>{
       const moving=cars.filter(v=>v.ai),start=moving.map(v=>({x:v.x,z:v.z}));
       for(let i=0;i<600;i++)step();
@@ -60,7 +61,7 @@ with sync_playwright() as p:
       return{traffic:moving.length,progressed};
     }""")
     mobile=browser.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True)
-    mobile.route('**/*',route);mp=mobile.new_page();mp.goto('https://game.test/',wait_until='load');mp.wait_for_function('gameplay!==null')
+    mobile.route('**/*',route);mp=mobile.new_page();mp.goto('https://game.test/',wait_until='load');mp.wait_for_function('gameplay!==null',polling=50)
     mobile_counts=mp.evaluate("""()=>({peds:peds.length,traffic:cars.filter(v=>v.ai).length})""")
     assert mobile_counts=={'peds':48,'traffic':18},mobile_counts
     result.update({'traffic':traffic,'mobile':mobile_counts})

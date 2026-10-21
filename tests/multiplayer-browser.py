@@ -31,7 +31,7 @@ with sync_playwright() as p:
     assert not c.locator('#chat-messages').inner_text().find('Hello everyone!')>=0
     b.locator('#chat-input').fill('w a s d e c h');assert b.evaluate('!k.w&&!k.a&&!k.s&&!k.d&&!k.e&&!k.c&&!k.h')
     b.locator('#chat-input').fill('Draft survives reconnect')
-    print('Testing reconnect',flush=True);bc.set_offline(True);b.wait_for_function('!gameplay.multiplayer.online',polling=100);assert b.locator('#online-open').inner_text()=='Reconnecting…';bc.set_offline(False);b.wait_for_function('gameplay.multiplayer.online',timeout=12000,polling=100)
+    print('Testing reconnect',flush=True);bc.set_offline(True);b.wait_for_function('!gameplay.multiplayer.online',polling=100);assert b.locator('#online-open').inner_text()=='Reconnecting…';bc.set_offline(False);b.wait_for_function('gameplay.multiplayer.online',polling=50,timeout=12000,polling=100)
     assert b.locator('#chat-input').input_value()=='Draft survives reconnect'
     assert b.locator('#chat-messages li').filter(has_text='Hello everyone!').count()==1
     # Authoritative peer state drives a separate remote render object, never local AI.

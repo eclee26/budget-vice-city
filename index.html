@@ -35,6 +35,7 @@ document.getElementById('boot-retry').onclick=()=>location.reload();window.addEv
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 
+<script src="gltf-loader.js"></script><script src="imported-civic.js"></script>
 <script src="vehicle-dynamics.js"></script>
 <script src="pedestrian-ai.js"></script>
 <script src="pedestrian-crowd.js"></script>
@@ -404,6 +405,7 @@ function kaze(o,t){const c=carMat('#26394f'),L=t.L,W=t.W;
  for(const x of[-L*.31,L*.31])for(const z of[-W/2,W/2]){bx(RUB,.9,.9,.28,x,.45,z,o);bx(new THREE.MeshStandardMaterial({color:lin('#c9a227'),metalness:.9,roughness:.25}),.55,.55,.3,x,.45,z,o)}}
 const cars=[],dark=GLASS;
 // Exterior profiles follow the regional references in references/CIVIC_REFERENCES.md.
+TY['1999 Honda Civic Si']={...TY['Honda Civic SiR 1997'],imported:true,paint:'#c21e22'};
 const civicProfiles={
  fd:{roof:1.435,rear:-1.39,roofRear:-.60,roofFront:.27,front:1.35,nose:.875,deck:1.015,plate:'TYPE R',spokes:7},
  fb:{roof:1.435,rear:-1.25,roofRear:-.66,roofFront:.32,front:1.17,nose:.875,deck:1.015,plate:'FB 2013',spokes:5},
@@ -669,12 +671,13 @@ function mkCar(n){const t=TY[n],o=new THREE.Group(),wheels=[],col=CAR_PAINTS[R()
  if(t.civic)civicLights(v);else{for(const z of zs){lb(headMat,.06,.16,.4,t.L/2+.02,y,z);lb(v.tm,.06,.15,.4,-t.L/2-.02,y+.08,z)}lb(v.rm,.06,.1,.3,-t.L/2-.02,y-.07,0)}
  if(!t.civic)for(const s of[-1,1])for(const x of[t.L/2+.01,-t.L/2-.01]){const b=lb(ambMat,.07,.09,.14,x,y+(x>0?.14:-.1),s*(t.W/2-.08));b.side_=s;b.visible=false;v.il.push(b)}
  if(t.civic==='fd')fdBatch(v);vehicleRefinement(v);optimizeVehicleRendering(v);prepareVehicleDoors(v);
- cars.push(v);return v}
-const types=Object.keys(TY),civicNames=types.filter(n=>TY[n].civic),parkedTypes=types.filter(n=>n!='Kaze R'),trafficTypes=types.filter(n=>n!='Bike'&&n!='Kaze R'),rt=()=>parkedTypes[R()*parkedTypes.length|0];
+ if(t.imported&&ImportedCivic.parts)ImportedCivic.attach(v);cars.push(v);return v}
+const types=Object.keys(TY),civicNames=types.filter(n=>TY[n].civic&&!TY[n].imported),parkedTypes=types.filter(n=>n!='Kaze R'&&!TY[n].imported),trafficTypes=types.filter(n=>n!='Bike'&&n!='Kaze R'&&!TY[n].imported),rt=()=>parkedTypes[R()*parkedTypes.length|0];
 function lanePoint(e,i,dir=1,offset=null){const p=e.points[i],a=e.points[Math.max(0,i-1)],b=e.points[Math.min(e.points.length-1,i+1)],d=Math.hypot(b.x-a.x,b.z-a.z)||1,l=offset==null?(e.width==ROAD.boulevard?e.width*.34:e.width*.25):offset;
  return{x:p.x-(b.z-a.z)/d*l*dir,z:p.z+(b.x-a.x)/d*l*dir,a:Math.atan2((b.z-a.z)*dir,(b.x-a.x)*dir)}}
 const start=lanePoint(coastStart,44,1,8.5);
 {const v=mkCar('Kaze R');v.x=start.x;v.z=start.z;v.a=start.a}
+{const p=lanePoint(coastStart,54,1,8.5),v=mkCar('1999 Honda Civic Si');v.x=p.x;v.z=p.z;v.a=p.a;}
 // A fixed lineup beside the starting coast makes every requested Civic available.
 for(let i=0;i<civicNames.length;i++){const p=lanePoint(coastStart,62+i*18,1,8.5),v=mkCar(civicNames[i]);v.x=p.x;v.z=p.z;v.a=p.a}
 const parkingRoads=roads.filter(e=>e.width>=ROAD.street);
@@ -971,7 +974,8 @@ let shake=0,ca=P.a,obs=[];
 const G9=9.81,DT=1/60;
 // On-foot velocities use metres per simulation tick; ambient walkers expose metres per second.
 function characterBlocked(x,z){
- const radius=.3;
+ const radius=typeof gameplay!=='undefined'&&gameplay?.story?.carrying?.5:.3;
+ if(typeof gameplay!=='undefined'&&gameplay?.story?.blocks(x,z,radius))return true;
  if(solid(x,z))return true;
  for(let i=0;i<8;i++){const a=i*PI/4;if(solid(x+Math.cos(a)*radius,z+Math.sin(a)*radius))return true;}
  for(const v of cars){const dx=x-v.x,dz=z-v.z,c=Math.cos(v.a),s=Math.sin(v.a),u=dx*c+dz*s,q=-dx*s+dz*c;
@@ -984,7 +988,7 @@ function moveCharacter(){
  if(!analog){x=(pressed('d')?1:0)-(pressed('a')?1:0);y=(pressed('w')?1:0)-(pressed('s')?1:0);}
  const length=Math.hypot(x,y),amount=Math.min(1,length),running=analog?amount>.85:pressed('shift');
  if(length>1){x/=length;y/=length;}
- const yaw=ca+yo,pace=running?.13:.065,tx=(Math.cos(yaw)*y-Math.sin(yaw)*x)*pace,tz=(Math.sin(yaw)*y+Math.cos(yaw)*x)*pace;
+ const yaw=ca+yo,pace=(running?.13:.065)*(typeof gameplay!=='undefined'&&gameplay?.story?.carrying?.75:1),tx=(Math.cos(yaw)*y-Math.sin(yaw)*x)*pace,tz=(Math.sin(yaw)*y+Math.cos(yaw)*x)*pace;
  const airborne=P.y>0,blend=airborne?.055:length>0?.2:.3;
  P.vx+=(tx-P.vx)*blend;P.vz+=(tz-P.vz)*blend;
  if(length>.01){const angle=Math.atan2(tz,tx)-P.a;P.a+=clamp(Math.atan2(Math.sin(angle),Math.cos(angle)),-.16,.16);}
@@ -1004,15 +1008,16 @@ function moveCharacter(){
  P.o.position.y=P.y+worldElevation(P.x,P.z);
 }
 function resolveCharacterContacts(){
+ const radius=typeof gameplay!=='undefined'&&gameplay?.story?.carrying?.5:.3,padding=radius+.015;
  for(const v of cars){
   const c=Math.cos(v.a),s=Math.sin(v.a),dx=P.x-v.x,dz=P.z-v.z,u=dx*c+dz*s,q=-dx*s+dz*c,l=v.t.L/2,w=v.t.W/2;
-  const cu=clamp(u,-l,l),cq=clamp(q,-w,w),distance=Math.hypot(u-cu,q-cq);if(distance>=.3)continue;
-  const candidates=distance>.0001?[[cu+(u-cu)/distance*.315,cq+(q-cq)/distance*.315]]:[];
-  candidates.push([l+.315,clamp(q,-w,w)],[-l-.315,clamp(q,-w,w)],[clamp(u,-l,l),w+.315],[clamp(u,-l,l),-w-.315]);
+  const cu=clamp(u,-l,l),cq=clamp(q,-w,w),distance=Math.hypot(u-cu,q-cq);if(distance>=radius)continue;
+  const candidates=distance>.0001?[[cu+(u-cu)/distance*padding,cq+(q-cq)/distance*padding]]:[];
+  candidates.push([l+padding,clamp(q,-w,w)],[-l-.315,clamp(q,-w,w)],[clamp(u,-l,l),w+padding],[clamp(u,-l,l),-w-.315]);
   candidates.sort((a,b)=>Math.hypot(a[0]-u,a[1]-q)-Math.hypot(b[0]-u,b[1]-q));
   for(const [along,side]of candidates){const x=v.x+c*along-s*side,z=v.z+s*along+c*side;if(characterBlocked(x,z))continue;
    const count=Math.ceil(Math.hypot(x-P.x,z-P.z)/.1);let clear=true;
-   for(let i=1;i<=count&&clear;i++)for(let n=0;n<8;n++){const a=n*PI/4;if(solid(P.x+(x-P.x)*i/count+Math.cos(a)*.3,P.z+(z-P.z)*i/count+Math.sin(a)*.3)){clear=false;break;}}
+   for(let i=1;i<=count&&clear;i++)for(let n=0;n<8;n++){const a=n*PI/4;if(solid(P.x+(x-P.x)*i/count+Math.cos(a)*radius,P.z+(z-P.z)*i/count+Math.sin(a)*radius)){clear=false;break;}}
    if(clear){P.x=x;P.z=z;P.vx=P.vz=0;break;}
   }
  }
@@ -1080,7 +1085,7 @@ function phys(v,ti,bi,si,hb){const oldAngle=v.a;const t=v.t,tl=tile(v.x,v.z),off
  v.wheelSpin=(v.wheelSpin||0)-(v.vx*fx+v.vz*fz)/R0*DT;
  sweepVehicle(v,oldAngle);}
 
-function step(){const previousCars=cars.map(v=>({x:v.x,z:v.z,a:v.a}));trafficTick++;updateTrafficSignals();if(gameplay)gameplay.beforeStep();dayNight();const tr=clamp((pressed('d')?1:0)-(pressed('a')?1:0)+touch.x,-1,1);obs=car?cars.concat(peds):cars.concat(peds,[P]);
+function step(){const previousCars=cars.map(v=>({x:v.x,z:v.z,a:v.a}));trafficTick++;updateTrafficSignals();if(gameplay)gameplay.beforeStep();dayNight();const tr=clamp((pressed('d')?1:0)-(pressed('a')?1:0)+touch.x,-1,1);obs=car?cars.concat(peds):cars.concat(peds,[P]);if(gameplay?.story)obs.push(...gameplay.story.obstacles());
  for(const v of cars)gameplay?.transition?.v===v?phys(v,0,0,0,true):v==car?phys(v,pressed('w')?1:0,pressed('s')?1:0,tr,pressed(' ')):v.policeActive?gameplay.sandbox.drivePolice(v):v.ai?aiDrive(v):phys(v,0,0,0,1);
  // Contact impulses follow the rotated bodies, including angular inertia and friction.
  for(let pass=0;pass<3;pass++)for(let i=0;i<cars.length;i++)for(let j=i+1;j<cars.length;j++){
@@ -1088,12 +1093,12 @@ function step(){const previousCars=cars.map(v=>({x:v.x,z:v.z,a:v.a}));trafficTic
   const impact=pass===0?sweepVehiclePair(A,B,previousCars[i],previousCars[j]):resolveVehicleContact(A,B);if(impact>3){hurt(A,impact);hurt(B,impact);sparks((A.x+B.x)/2,.7,(A.z+B.z)/2,impact);if(A===car||B===car)gameplay?.sandbox.collision(A===car?B:A,impact);}if((A===car||B===car)&&impact>4)shake=Math.min(1.5,impact/15);
  }
  // Ambient intent, personal space and predictive traffic reactions.
- pedestrianAI.tick(peds,cars,car?null:P,DT);
+ pedestrianAI.tick(peds,cars,car?null:P,DT,gameplay?.story?.obstacles()||[]);
  // player
  if(car){if(!gameplay?.transition?.exiting){P.x=car.x;P.z=car.z;P.a=car.a}}
  else if(gameplay?.transition){P.vx=P.vz=0;P.o.position.y=0}
  else moveCharacter();
- for(const v of cars){for(const wheel of v.wheels){wheel.steer.rotation.y=wheel.front?-v.st:0;const contact=v.contacts?.find(w=>w.front===wheel.front&&Math.sign(w.q)===Math.sign(wheel.steer.position.z)),spin=contact?.spin||v.wheelSpin||0;wheel.spin.rotation.z=spin;if(wheel.low)wheel.low.rotation.z=spin}v.o.position.set(v.x,0,v.z);v.o.rotation.set(v.roll,-v.a,v.pitch);if(Math.abs(v.x-P.x)+Math.abs(v.z-P.z)<160)carFx(v)}
+ for(const v of cars){ImportedCivic.animate(v);for(const wheel of v.wheels){wheel.steer.rotation.y=wheel.front?-v.st:0;const contact=v.contacts?.find(w=>w.front===wheel.front&&Math.sign(w.q)===Math.sign(wheel.steer.position.z)),spin=contact?.spin||v.wheelSpin||0;wheel.spin.rotation.z=spin;if(wheel.low)wheel.low.rotation.z=spin}v.o.position.set(v.x,0,v.z);v.o.rotation.set(v.roll,-v.a,v.pitch);if(Math.abs(v.x-P.x)+Math.abs(v.z-P.z)<160)carFx(v)}
  if(gameplay)gameplay.tick();
  P.o.position.x=P.x;P.o.position.z=P.z;P.o.rotation.y=-P.a;
  // camera: chase + mouse/touch orbit, wheel zoom, recentres when moving
@@ -1108,9 +1113,9 @@ positionSun(P.x,P.z);updateContactShadows();if(trafficTick%6===0)updateScenery()
  cam.fov=65+(car?Math.min(12,sp*.22):0);cam.updateProjectionMatrix();cam.lookAt(P.x,1.5+P.y+cameraGround,P.z);
  if(car&&camMode){const t=car.t,fx=Math.cos(car.a),fz=Math.sin(car.a),rx=-fz,rz=fx,hood=camMode==1,f=hood?t.L*.22:-.15,s2=hood||car.n=='Bike'?0:-.38,y=car.n=='Bike'?1.55:hood?.4+t.H+.35:.4+t.H*.62+.35;
   cam.position.set(car.x+fx*f+rx*s2,y+cameraGround,car.z+fz*f+rz*s2);cp.copy(cam.position);const la=car.a+yo;cam.lookAt(cam.position.x+Math.cos(la)*20,y+cameraGround-.6-pt*2,cam.position.z+Math.sin(la)*20);cam.rotateZ(-car.roll*.5)}
- if(car&&camMode===3&&gameplay)gameplay.povCamera();
+ if(car&&(camMode===3||car.importedView&&camMode===2)&&gameplay)gameplay.povCamera();
  if(gameplay){gameplay.cameraFeedback();gameplay.updatePovCabin();}
- if(car)car.o.visible=camMode!==2&&camMode!==3;
+ if(car)car.o.visible=!!car.importedView||camMode!==2&&camMode!==3;
  updateHeadlights();
  updateHud()}
 // minimap
@@ -1148,4 +1153,4 @@ function advanceSimulation(now){const elapsed=Math.max(0,Math.min(.1,(now-simLas
  if(comp){fin.uniforms.ex.value=.98+.32*night;const s=car?Math.hypot(car.vx,car.vz):0;fin.uniforms.blur.value=car&&camMode!==2&&camMode!==3&&(!gameplay||gameplay.settings.blur)?Math.min(1,Math.max(0,(s-18)/35))*.018:0;comp.render()}
  else{r.toneMappingExposure=.55+.4*night;r.render(S,cam)}if(gameplay)gameplay.restoreVisual();requestAnimationFrame(loop)})();
 </script>
-<link rel="stylesheet" href="multiplayer.css"><script src="multiplayer.js"></script><script src="open-world.js"></script><script src="gameplay.js"></script></body></html>
+<link rel="stylesheet" href="multiplayer.css"><script src="multiplayer.js"></script><script src="open-world.js"></script><script src="story-mission.js"></script><script src="gameplay.js"></script></body></html>

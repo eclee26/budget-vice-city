@@ -5,7 +5,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
-const source=fs.readFileSync(require('node:path').join(__dirname,'../vehicle-dynamics.js'),'utf8')+html.slice(html.indexOf('const TY='),html.indexOf('const lit='))+html.slice(html.indexOf('const G9='),html.indexOf('function step()'));
+const source=fs.readFileSync(require('node:path').join(__dirname,'../vehicle-dynamics.js'),'utf8')+html.slice(html.indexOf('const TY='),html.indexOf('const lit='))+html.slice(html.indexOf("TY['1999 Honda Civic Si']="),html.indexOf('const civicProfiles='))+html.slice(html.indexOf('const G9='),html.indexOf('function step()'));
 function model(surface=1){
  const c=vm.createContext({Math,PI:Math.PI,R:()=>.5,tile:()=>surface,solid:()=>false,hurt:()=>{},sparks:()=>{},car:null,shake:0});
  vm.runInContext(source+';globalThis.types=TY;globalThis.tick=phys;',c);

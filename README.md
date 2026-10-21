@@ -202,3 +202,6 @@ Internet hosting is prepared for Render with `render.yaml` and `Dockerfile`. Fol
 
 
 For your own Ubuntu server, run `docker compose up -d --build`. The default Compose setup runs only the game at `127.0.0.1:18080` for your existing host Nginx to proxy. The Nginx site example is `nginx/game.conf.example`; change `GAME_PORT` in `.env` if needed. Caddy is an optional dedicated-server override. See [DEPLOYMENT.md](DEPLOYMENT.md#ubuntu-with-docker-compose-and-existing-nginx) for setup and updates.
+
+
+**1999 Honda Civic Si (imported model)** — the supplied GLB is a separate drivable car parked ahead of the starting Kaze R on the coast. Use Menu → Vehicle → Find 1999 Civic Si to mark its location. It uses the existing E entry/exit, WASD/touch driving, C camera cycle, lights/signals and save system. The source wheels and steering wheel animate, and Driver POV uses the source cockpit. Handling is the game's approximate Civic profile. The detailed model is excluded from random traffic; distant views use a simple rendering proxy. Source credits and noncommercial license terms are in [THIRD_PARTY_ASSETS.md](THIRD_PARTY_ASSETS.md).

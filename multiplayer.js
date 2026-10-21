@@ -102,14 +102,14 @@ class CityMultiplayer {
   }
   async sendState() {
     if(!this.session||this.pendingState)return;const session=this.session;this.pendingState=true;
-    const paint=car?.o.children.find(o=>o.isMesh&&o.material.isMeshPhysicalMaterial&&![GLASS,civicGlass,fdGlass,lampCoverMaterial].includes(o.material))?.material;
+    const paint=car?.importedView?.paint||car?.o.children.find(o=>o.isMesh&&o.material.isMeshPhysicalMaterial&&![GLASS,civicGlass,fdGlass,lampCoverMaterial].includes(o.material))?.material;
     const data={x:car?car.x:P.x,z:car?car.z:P.z,y:car?car.o.position.y:P.o.position.y,a:car?car.a:P.a,vx:car?car.vx:P.vx*60,vz:car?car.vz:P.vz*60,vehicle:car?.n||null,steer:car?.st||0,roll:car?.o.rotation.x||0,pitch:car?.o.rotation.z||0,paint:paint?'#'+paint.color.clone().convertLinearToSRGB().getHexString():'#a3a7aa',signal:car?.ind||0,paused:help.open||document.hidden};
     try{await this.request('/api/state',data,session);}catch(error){if(error.status===401&&this.session===session){this.leave(false);this.status('Session expired. Join the room again.');}else if(this.session===session&&this.online&&(!error.status||error.status>=500))this.reconnect(this.generation,0,error);}finally{this.pendingState=false;}
   }
   remoteCar(model) {
     const index=this.carPool.findIndex(v=>v.n===model);if(index>=0)return this.carPool.splice(index,1)[0];
     const v=mkCar(model);cars.splice(cars.indexOf(v),1);this.game.poseBuffer=null;
-    const source=v.o.children.find(o=>o.isMesh&&o.material.isMeshPhysicalMaterial&&![GLASS,civicGlass,fdGlass,lampCoverMaterial].includes(o.material))?.material;
+    const source=v.importedView?.paint||v.o.children.find(o=>o.isMesh&&o.material.isMeshPhysicalMaterial&&![GLASS,civicGlass,fdGlass,lampCoverMaterial].includes(o.material))?.material;
     if(source){v.remotePaint=source.clone();v.o.traverse(o=>{if(o.material===source)o.material=v.remotePaint;});}return v;
   }
   retireCar(v) {S.remove(v.o);v.o.visible=false;this.carPool.push(v);if(this.carPool.length>16){const old=this.carPool.shift();old.remotePaint?.dispose();old.tm.dispose();old.rm.dispose();old.o.traverse(o=>{if(o.isInstancedMesh){if(o.dispose)o.dispose();else o.dispatchEvent({type:'dispose'});}});}}
@@ -121,7 +121,7 @@ class CityMultiplayer {
       if(p.position.distanceToSquared(target)>225)p.position.copy(target);else p.position.lerp(target,1-Math.exp(-dt*12));p.angle+=Math.atan2(Math.sin(state.a-p.angle),Math.cos(state.a-p.angle))*(1-Math.exp(-dt*12));
       const visible=Math.hypot(p.position.x-P.x,p.position.z-P.z)<130;p.H.g.visible=visible&&!state.vehicle;
       if(state.vehicle&&p.vehicle?.n!==state.vehicle){if(p.vehicle)this.retireCar(p.vehicle);p.vehicle=this.remoteCar(state.vehicle);S.add(p.vehicle.o);}
-      if(p.vehicle){const v=p.vehicle;v.o.visible=visible&&!!state.vehicle;if(state.vehicle){v.o.position.copy(p.position);v.o.rotation.set(state.roll,-p.angle,state.pitch);v.remotePaint?.color.copy(lin(state.paint));for(const w of v.wheels){w.steer.rotation.y=w.front?-state.steer:0;w.spin.rotation.z-=Math.hypot(state.vx,state.vz)*dt/(v.t.r||.32);}for(const light of v.il)light.visible=state.signal!==0&&(state.signal===2||light.side_===state.signal)&&Math.floor(now/450)%2===0;}}
+      if(p.vehicle){const v=p.vehicle;v.o.visible=visible&&!!state.vehicle;if(state.vehicle){v.o.position.copy(p.position);v.o.rotation.set(state.roll,-p.angle,state.pitch);v.remotePaint?.color.copy(lin(state.paint));v.st=state.steer;ImportedCivic.animate(v);for(const w of v.wheels){w.steer.rotation.y=w.front?-state.steer:0;w.spin.rotation.z-=Math.hypot(state.vx,state.vz)*dt/(v.t.r||.32);}for(const light of v.il)light.visible=state.signal!==0&&(state.signal===2||light.side_===state.signal)&&Math.floor(now/450)%2===0;}}
       p.H.g.position.copy(p.position);p.H.g.rotation.set(0,-p.angle,0);p.phase+=Math.hypot(state.vx,state.vz)*dt*2.6;if(p.H.g.visible)anim(p.H,p.phase,state.paused?0:.5,Math.hypot(state.vx,state.vz)>4,0);
     }
   }

@@ -13,6 +13,9 @@ test('room membership, authenticated state, global chat, isolation and bounded i
     const doors=await fetch(base+'/vehicle-doors.js');assert.equal(doors.status,200);assert.match(await doors.text(),/function setVehicleDoor/);
     const pedestrians=await fetch(base+'/pedestrian-ai.js');assert.equal(pedestrians.status,200);assert.match(await pedestrians.text(),/class AmbientPedestrians/);
     const crowd=await fetch(base+'/pedestrian-crowd.js');assert.equal(crowd.status,200);assert.match(await crowd.text(),/class PedestrianCrowd/);
+    const model=await fetch(base+'/assets/vehicles/1999_honda_civic_si.glb');assert.equal(model.status,200);assert.equal(model.headers.get('content-type'),'model/gltf-binary');assert.equal(new DataView(await model.arrayBuffer()).getUint32(0,true),0x46546c67);
+    for(const file of ['gltf-loader.js','imported-civic.js'])assert.equal((await fetch(base+'/'+file)).status,200);
+    const story=await fetch(base+'/story-mission.js');assert.equal(story.status,200);assert.match(await story.text(),/class StoryMission/);
     const art=await fetch(base+'/character-art.js');assert.equal(art.status,200);assert.match(await art.text(),/function createHumanGeometry/);
     for(const path of ['/.git/config','/.env','/server.mjs','/tests/multiplayer-server.test.mjs'])assert.equal((await fetch(base+path)).status,404);
     assert.equal((await post('/api/join',{name:'x',room:'TEST',world:'old'})).status,400);
@@ -21,6 +24,7 @@ test('room membership, authenticated state, global chat, isolation and bounded i
     assert.equal((await join('Third')).status,409);
     const events=await stream(bob.token);await events('history');assert.equal((await events('players')).players.length,2);
     assert.equal((await post('/api/state',{},'invalid')).status,401);
+    assert.equal((await post('/api/state',{x:140,z:120,y:0,a:0,vx:0,vz:0,vehicle:'1999 Honda Civic Si'},alice.token)).status,200);
     const state={x:140,z:120,y:0,a:0,vx:1,vz:0,vehicle:null};
     assert.equal((await post('/api/state',{...state,x:null},alice.token)).status,400);
     assert.equal((await post('/api/state',{...state,name:'Impersonated'},alice.token)).status,200);
