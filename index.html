@@ -38,6 +38,7 @@ document.getElementById('boot-retry').onclick=()=>location.reload();window.addEv
 <script src="vehicle-dynamics.js"></script>
 <script src="pedestrian-ai.js"></script>
 <script src="pedestrian-crowd.js"></script>
+<script src="character-art.js"></script>
 <script src="structures.js"></script>
 <script src="traffic-signals.js"></script>
 <script src="world-detail.js"></script>
@@ -715,20 +716,31 @@ function aiDrive(v){const A=v.ai,sp=Math.hypot(v.vx,v.vz),look=4+sp*.4,signalRul
 }
 // Metre-based human heights: the unscaled joint rig measures 2.02 m shoe-to-hair.
 // Humans: jointed people with walk/run cycles, calibrated against the vehicle dimensions.
-const SK=['#f1c7a5','#e0ac85','#c68a62','#8d5a3b','#5e3a24'],HR=['#1b1410','#3b2416','#7a4b22','#d9b06a','#666'],SH=['#e8e8e8','#c83232','#2a6fd6','#f2c14e','#3fa66b','#ff7ab8','#222','#7b4fd6','#f08a3c'],PN=['#2b3a55','#1d1d1d','#6b5a45','#3b4d3b','#c9b79a','#8a8f99'];
-const pk=a=>a[R()*a.length|0],HG={c:new THREE.CylinderGeometry(1,1,1,9),s:new THREE.SphereGeometry(1,14,10),h:new THREE.SphereGeometry(1,14,8,0,PI*2,0,PI/1.75)};
+const SK=['#f1c7a5','#e0ac85','#c68a62','#8d5a3b','#5e3a24'],HR=['#1b1410','#3b2416','#654a36','#bca57a','#66615a'],SH=['#e4ded3','#385c70','#6f8171','#985c4b','#415264','#72576b','#252d35','#b4a177','#688792'],PN=['#2b3a55','#1d1d1d','#6b5a45','#3b4d3b','#c9b79a','#8a8f99'];
+const pk=a=>a[R()*a.length|0],HG=createHumanGeometry();
 function pt_(geo,c,sx,sy,sz,x,y,z,par){const b=new THREE.Mesh(geo,typeof c=='string'?mat(c):c);b.scale.set(sx,sy,sz);b.position.set(x,y,z);b.castShadow=true;par.add(b);return b}
 function gp(x,y,z,par){const g=new THREE.Group();g.position.set(x,y,z);par.add(g);return g}
-function mkHuman(o){const g=new THREE.Group(),sk=o.skin,H={g};g.rotation.order='YXZ';const body=gp(0,HUMAN.soleOffset,0,g);H.body=body;
- H.legs=[-1,1].map(s=>{const hip=gp(0,.95,s*.11,body);pt_(HG.c,o.pants,.095,.47,.095,0,-.23,0,hip);const knee=gp(0,-.46,0,hip);
-  pt_(HG.c,o.pants,.078,.44,.078,0,-.22,0,knee);pt_(box,o.shoe,.27,.09,.12,.05,-.45,0,knee);return{hip,knee}});
- const tor=gp(0,.98,0,body);H.tor=tor;pt_(HG.c,o.pants,.13,.2,.19,0,0,0,tor);pt_(HG.c,o.shirt,.13,.56,.2,0,.36,0,tor);pt_(HG.s,o.shirt,.12,.09,.25,0,.62,0,tor);
- pt_(HG.c,sk,.05,.14,.05,0,.72,0,tor);const hd=gp(0,.88,0,tor);H.head=hd;H.eyes=[];pt_(HG.s,sk,.115,.14,.105,0,0,0,hd);pt_(HG.h,o.hair,.125,.13,.115,-.012,.025,0,hd);
- if(o.long)H.longHair=pt_(HG.s,o.hair,.06,.2,.11,-.08,-.1,0,hd);pt_(box,sk,.04,.045,.03,.115,-.01,0,hd);pt_(box,'#5a3a2a',.01,.012,.05,.105,-.06,0,hd);
- if(o.shades)pt_(box,'#0a0a0a',.02,.035,.19,.112,.025,0,hd);else for(const z of[-.042,.042])H.eyes.push(pt_(box,'#111',.01,.02,.022,.11,.025,z,hd));
- H.arms=[-1,1].map(s=>{const sh=gp(0,.6,s*.25,tor);sh.rotation.x=s*.07;pt_(HG.c,o.shirt,.065,.3,.065,0,-.15,0,sh);const el=gp(0,-.3,0,sh);
-  pt_(HG.c,sk,.048,.27,.048,0,-.13,0,el);pt_(HG.s,sk,.048,.06,.04,0,-.29,0,el);return{sh,el}});
- H.height=o.height||HUMAN.playerHeight;g.scale.setScalar(H.height/HUMAN.rigHeight);S.add(g);return H}
+function mkHuman(o){const g=new THREE.Group(),sk=o.skin,H={g,paint:{},garment:o.garment||'polo',hairStyle:o.hairStyle||(o.long?'bob':'part'),build:o.build||'regular'};g.rotation.order='YXZ';const body=gp(0,HUMAN.soleOffset,0,g);H.body=body;
+ const width=H.build==='lean'?.86:H.build==='sturdy'?1.12:1,depth=H.build==='lean'?.92:H.build==='sturdy'?1.12:1,part=(channel,geometry,color,sx,sy,sz,x,y,z,parent,tone=0)=>humanPart(H,channel,geometry,color,sx,sy,sz,x,y,z,parent,tone);
+ H.legs=[-1,1].map(side=>{const hip=gp(0,.95,side*.11,body);part('pants',HG.c,o.pants,.105*depth,.47,.105*width,0,-.23,0,hip);const knee=gp(0,-.46,0,hip);
+  part('pants',HG.c,o.pants,.081*depth,.44,.082*width,0,-.22,0,knee);part('shoe',HG.f,o.shoe,.27,.09,.13,.05,-.45,0,knee);part(null,HG.f,'#282d31',.273,.018,.133,.05,-.484,0,knee);return{hip,knee};});
+ const tor=gp(0,.98,0,body);H.tor=tor;part('pants',HG.pelvis,o.pants,.14*depth,.2,.22*width,0,0,0,tor);part('shirt',HG.t,o.shirt,.13*depth,.56,.2*width,0,.36,0,tor);part('shirt',HG.s,o.shirt,.12*depth,.03,.245*width,0,.63,0,tor);part('shirt',HG.belt,o.shirt,.055,.016,.055,0,.66,0,tor,-.12);
+ part('pants',HG.belt,o.pants,.135*depth,.020,.210*width,0,.04,0,tor,-.35);part(null,box,'#a6a59c',.007,.027,.031,.138*depth,.04,0,tor);
+ part('skin',HG.c,sk,.05,.14,.05,0,.72,0,tor);const hd=gp(0,.88,0,tor);H.head=hd;H.eyes=[];part('skin',HG.face,sk,.115,.14,.100,0,0,0,hd);part('hair',HG.h,o.hair,.126,.13,.108,-.012,.025,0,hd);
+ for(const side of[-1,1]){part('skin',HG.d,sk,.021,.031,.014,-.006,-.005,side*.096,hd);part('hair',box,o.hair,.006,.005,.030,.108,.047,side*.038,hd);}
+ part('skin',HG.d,sk,.020,.024,.018,.111,-.008,0,hd);part(null,box,'#784b43',.006,.007,.043,.098,-.064,0,hd);
+ if(o.shades){part(null,box,'#18232c',.019,.033,.078,.111,.022,-.046,hd);part(null,box,'#18232c',.019,.033,.078,.111,.022,.046,hd);part(null,box,'#343b40',.024,.008,.024,.115,.027,0,hd);}
+ else for(const z of[-.038,.038]){const eye=gp(.103,.020,z,hd);eye.scale.y=.02;part(null,HG.d,'#d6d4c8',.008,.35,.016,0,0,0,eye);part(null,HG.d,'#282a25',.0035,.27,.0065,.007,0,0,eye);H.eyes.push(eye);}
+ if(o.long||['bob','tied'].includes(H.hairStyle)){H.longHair=gp(0,0,0,hd);if(H.hairStyle==='tied')part('hair',HG.s,o.hair,.061,.068,.065,-.13,-.015,0,H.longHair);else{part('hair',HG.s,o.hair,.065,.17,.11,-.077,-.11,0,H.longHair);for(const side of[-1,1])part('hair',HG.s,o.hair,.042,.12,.035,-.016,-.075,side*.091,H.longHair);}}
+ if(H.hairStyle==='curl')for(const [x,z]of[[.015,-.055],[.04,.025],[-.045,.055]])part('hair',HG.s,o.hair,.06,.035,.055,x,.112,z,hd);
+ if(H.hairStyle==='part')part('hair',HG.s,o.hair,.068,.022,.042,.016,.126,-.04,hd,.08);
+ const collar=H.garment!=='tee';if(collar)for(const side of[-1,1]){const flap=part('shirt',HG.f,o.shirt,.006,.055,.055,humanShirtFront(.625,side*.05,depth,width)+.002,.625,side*.05,tor,-.15);flap.rotation.x=side*.3;}
+ if(['polo','shirt'].includes(H.garment))for(let i=0;i<(H.garment==='shirt'?5:2);i++)part(null,box,'#c6c2b7',.004,.008,.008,humanShirtFront(.59-i*.075,0,depth,width)+(H.garment==='shirt'?.008:.002),.59-i*.075,0,tor);
+ if(H.garment==='shirt'){humanClothLine(H,[.15,.22,.29,.36,.43,.50,.59].map(y=>[y,0]),o.shirt,-.12,.006,tor,depth,width);humanClothLine(H,[[.49,-.13*width],[.49,-.055*width],[.415,-.055*width],[.398,-.09*width],[.415,-.13*width],[.49,-.13*width]],o.shirt,-.18,.003,tor,depth,width);}
+ if(H.garment==='jacket'){for(const side of[-1,1])humanClothLine(H,[.13,.22,.32,.42,.52,.60].map(y=>[y,side*.085*width]),o.shirt,-.28,.007,tor,depth,width);humanClothLine(H,[.13,.22,.32,.42,.52,.60].map(y=>[y,0]),o.shirt,.27,.008,tor,depth,width);}
+ H.arms=[-1,1].map(side=>{const sh=gp(0,.64,side*.25*width,tor);sh.rotation.x=side*.07;part('shirt',HG.c,o.shirt,.067*depth,.3,.068*width,0,-.15,0,sh);const el=gp(0,-.3,0,sh),sleeved=['shirt','jacket'].includes(H.garment);
+  part(sleeved?'shirt':'skin',HG.c,sleeved?o.shirt:sk,.049*depth,.27,.05*width,0,-.13,0,el);if(sleeved)part('shirt',HG.c,o.shirt,.052*depth,.035,.052*width,0,-.25,0,el,-.18);part('skin',HG.s,sk,.047,.06,.038,0,-.29,0,el);return{sh,el};});
+ H.height=o.height||HUMAN.playerHeight;H.radius=.34*width*H.height/HUMAN.rigHeight;g.scale.setScalar(H.height/HUMAN.rigHeight);S.add(g);return H}
 function anim(H,ph,amp,run,air){const s=Math.sin(ph);
  H.legs.forEach((l,i)=>{const d=i?-1:1;l.hip.rotation.z=air?.6:d*s*amp*.7;l.knee.rotation.z=air?-1.1:-Math.max(0,-d*Math.sin(ph+.7))*amp*1.3});
  H.arms.forEach((a,i)=>{const d=i?-1:1;a.sh.rotation.z=air?-.4:-d*s*amp*.6;a.el.rotation.z=run?1.4:.15+amp*.3});
@@ -744,12 +756,13 @@ for(const e of roads)if(e.width!==ROAD.bridge)for(const side of[-1,1]){
  }finish();
 }
 function placePedestrian(p,initial=false){return pedestrianPopulation.place(p,peds,cars,P,{initial});}
-function mkPed(x,z){const H=mkHuman({skin:pk(SK),hair:pk(HR),shirt:pk(SH),pants:pk(PN),shoe:pk(['#222','#eee','#6b4a2b']),long:R()<.4,height:HUMAN.npcMin+R()*(HUMAN.npcMax-HUMAN.npcMin)});
- const p={x,z,a:R()*6.28,o:H.g,H,dn:0,fl:0,vx:0,vz:0,ph:R()*9,pace:.022+R()*.012};peds.push(p);return p}
+function mkPed(x,z){const look={skin:pk(SK),hair:pk(HR),shirt:pk(SH),pants:pk(PN),shoe:pk(['#292c30','#ddd8ca','#59493c'])},hairRoll=R(),heightRoll=R();
+ Object.assign(look,{long:hairRoll<.4,hairStyle:['bob','tied','part','crop','curl'][Math.floor(hairRoll*5)],garment:['tee','polo','shirt','jacket'][Math.floor(hairRoll*1000)%4],build:['lean','regular','sturdy'][Math.floor(heightRoll*1000)%3],height:HUMAN.npcMin+heightRoll*(HUMAN.npcMax-HUMAN.npcMin)});const H=mkHuman(look);
+ const p={x,z,a:R()*6.28,o:H.g,H,radius:H.radius,dn:0,fl:0,vx:0,vz:0,ph:R()*9,pace:.022+R()*.012};peds.push(p);return p}
 // The controller changes intent; this adapter owns city collision and rig poses.
 const pedestrianAI=new AmbientPedestrians({
  random:R,relocate:placePedestrian,canRelocate:p=>!p.o.visible&&Math.hypot(p.x-P.x,p.z-P.z)>100,
- safe(p,x,z){return !(solid(x,z)||tile(x,z)===1&&tile(p.x,p.z)!==1||solid(x+.23,z)||solid(x-.23,z)||solid(x,z+.23)||solid(x,z-.23));},
+ safe(p,x,z){const radius=p.radius||.23;return !(solid(x,z)||tile(x,z)===1&&tile(p.x,p.z)!==1||solid(x+radius,z)||solid(x-radius,z)||solid(x,z+radius)||solid(x,z-radius));},
  collision(v){if(v===car){shake=.4;gameplay?.sandbox.crime(1.3,'Pedestrian collision reported');}},
  pose(p,state,speed,dt,time){
   p.o.position.set(p.x,worldElevation(p.x,p.z)+(p.dn?.2:0),p.z);p.o.rotation.set(0,-p.a,p.dn?PI/2:0);
@@ -772,12 +785,12 @@ const pedestrianPopulation=new PedestrianPopulation({
  routes:sidewalkRoutes,freeSites:pedestrianFreeSites,random:R,drawRange:()=>graphics.mobile?65:95,
  prepareView(){cam.updateMatrixWorld();pedestrianView.setFromProjectionMatrix(pedestrianViewMatrix.multiplyMatrices(cam.projectionMatrix,cam.matrixWorldInverse));},
  visible(p){pedestrianViewSphere.center.set(p.x,worldElevation(p.x,p.z)+1,p.z);return pedestrianView.intersectsSphere(pedestrianViewSphere);},
- safe(p){return tile(p.x,p.z)!==1&&!inMask(asphaltMask,p.x,p.z)&&pedestrianAI.world.safe(p,p.x,p.z);},
+ safe(site,p){return tile(site.x,site.z)!==1&&!inMask(asphaltMask,site.x,site.z)&&pedestrianAI.world.safe(p||site,site.x,site.z);},
  reset(p){pedestrianAI.reset(p);p.o.visible=Math.hypot(p.x-P.x,p.z-P.z)<(graphics.mobile?65:95);pedestrianAI.world.pose(p,p.ambient,0,0,pedestrianAI.time);p.o.position.set(p.x,worldElevation(p.x,p.z),p.z);p.o.rotation.set(0,-p.a,0);}
 });
-const pedestrianCrowd=new PedestrianCrowd(S,[HG.c,HG.s,HG.h,box]);S.onBeforeRender=()=>pedestrianCrowd.update(peds);
+const pedestrianCrowd=new PedestrianCrowd(S,[...Object.values(HG),box]);S.onBeforeRender=()=>pedestrianCrowd.update(peds);
 // player
-const PH=mkHuman({skin:'#e0ac85',hair:'#1b1410',shirt:'#1f8fa8',pants:'#2b3a55',shoe:'#eee',shades:1,height:HUMAN.playerHeight}),P={x:start.x-Math.cos(start.a)*5,z:start.z-Math.sin(start.a)*5,a:start.a,vx:0,vz:0,vy:0,y:0,ph:0,o:PH.g,H:PH};
+const PH=mkHuman({skin:'#e0ac85',hair:'#1b1410',shirt:'#1f8fa8',pants:'#2b3a55',shoe:'#eee',shades:1,height:HUMAN.playerHeight}),P={x:start.x-Math.cos(start.a)*5,z:start.z-Math.sin(start.a)*5,a:start.a,vx:0,vz:0,vy:0,y:0,ph:0,o:PH.g,H:PH,radius:PH.radius};
 // Keyboard, captured touch pointers and camera drag use independent input state.
 let car=null,camMode=0,yo=0,pt=.2,zm=1,drag=0,lx=0,ly=0,idle=0,cameraPointer=null;
 const k={},held=new Map(),touch={x:0,y:0,id:null},key=e=>({arrowup:'w',arrowdown:'s',arrowleft:'a',arrowright:'d',f:'e'}[e.key.toLowerCase()]||e.key.toLowerCase()),pressed=n=>!!k[n]||[...held.values()].includes(n),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));

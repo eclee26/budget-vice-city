@@ -13,6 +13,7 @@ test('room membership, authenticated state, global chat, isolation and bounded i
     const doors=await fetch(base+'/vehicle-doors.js');assert.equal(doors.status,200);assert.match(await doors.text(),/function setVehicleDoor/);
     const pedestrians=await fetch(base+'/pedestrian-ai.js');assert.equal(pedestrians.status,200);assert.match(await pedestrians.text(),/class AmbientPedestrians/);
     const crowd=await fetch(base+'/pedestrian-crowd.js');assert.equal(crowd.status,200);assert.match(await crowd.text(),/class PedestrianCrowd/);
+    const art=await fetch(base+'/character-art.js');assert.equal(art.status,200);assert.match(await art.text(),/function createHumanGeometry/);
     for(const path of ['/.git/config','/.env','/server.mjs','/tests/multiplayer-server.test.mjs'])assert.equal((await fetch(base+path)).status,404);
     assert.equal((await post('/api/join',{name:'x',room:'TEST',world:'old'})).status,400);
     assert.equal((await post('/api/join',{name:'x',room:'TEST',world:WORLD_ID},null,{Origin:'https://other.example'})).status,403);

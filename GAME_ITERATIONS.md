@@ -1,5 +1,11 @@
 # Improvement iterations
 
+## 2026-10-21 — shaped characters and coordinated wardrobe variety
+
+Replace plain body cylinders with shared profiled surfaces, shaped heads/hairlines, rounded shoes, visible facial features and fitted clothing seams/collars. Ambient residents combine three builds, five hairstyles and four garments with quieter palettes. Explicit palette roles recolor base and shaded details by reassignment, preserving shared materials. The neutral height envelope, joint calibration, seated actor identity and saved progress stay intact. Body width now feeds standing clearance, pedestrian spacing, vehicle contact/avoidance and recovery rather than leaving broader figures on the former fixed footprint.
+
+Visual review rejected oversized collar blocks, broad shoulder caps, a floating waist treatment and a disconnected hairline; these were corrected before final review. Sixty style/build combinations pass geometry, height, ground and neutral-radius checks. The final models use ten shared geometry families, with at most 56 parts and 3,564 triangles in the sampled variants. Crowd image/pose/color parity and resource reuse still pass. This is a clearer stylized population rather than commercial character art: faces remain simple and animation is still procedural. Overall provisional judgment remains 5.3/10. The next priority is authored mission/contact depth, while broader artwork and animation remain unfinished.
+
 ## 2026-10-21 — populated neighborhoods with shared crowd rendering
 
 The prior seeded starting view had only three pedestrians within 70 m, out of a 64-person pool spread across the city. Nearby site selection now places 44 within that range, with personal space and static/vehicle clearance. As the player travels, a bounded simulation-time pass reuses distant uninvolved residents at hidden sites; active injuries, fleeing/recovery and conversations remain protected. Failed placement leaves the original position intact. Menus pause replenishment and zero/max population still reuses the existing pool.

@@ -6,7 +6,7 @@ import {resolve} from 'node:path';
 
 export const WORLD_ID='coast-2026-v1';
 const root=new URL('./',import.meta.url);
-const files=new Set(['index.html','driving.css','multiplayer.css','multiplayer.js','gameplay.js','open-world.js','vehicle-dynamics.js','structures.js','traffic-signals.js','world-detail.js','world-streaming.js','vehicle-doors.js','pedestrian-ai.js','pedestrian-crowd.js']);
+const files=new Set(['index.html','driving.css','multiplayer.css','multiplayer.js','gameplay.js','open-world.js','vehicle-dynamics.js','structures.js','traffic-signals.js','world-detail.js','world-streaming.js','vehicle-doors.js','pedestrian-ai.js','pedestrian-crowd.js','character-art.js']);
 const models=new Set(['Sports','Sedan','Van','Bike','Kaze R','Honda Civic FD 2009','Honda Civic FB 2013','Honda Civic SiR 1997']);
 const clean=(value,max)=>typeof value==='string'?value.replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g,'').trim().slice(0,max):'';
 const finite=(v,min,max)=>typeof v==='number'&&Number.isFinite(v)&&v>=min&&v<=max;

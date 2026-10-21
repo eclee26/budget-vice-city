@@ -20,7 +20,7 @@ def route(request):
         else:request.continue_()
         return
     if url.path=='/':request.fulfill(body=source,content_type='text/html')
-    elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/pedestrian-crowd.js','/pedestrian-ai.js','/vehicle-doors.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']:
+    elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/character-art.js','/pedestrian-crowd.js','/pedestrian-ai.js','/vehicle-doors.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']:
         request.fulfill(body=(root/url.path[1:]).read_text(encoding='utf-8'),content_type='text/css' if url.path.endswith('.css') else 'text/javascript')
     else:request.fulfill(status=204,body='')
 

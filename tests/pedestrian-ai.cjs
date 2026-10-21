@@ -60,6 +60,10 @@ test('walkers leave personal space around a stationary on-foot player',()=>{
  for(let i=0;i<350;i++){s.run([p],[],1,player);closest=Math.min(closest,Math.hypot(p.x-player.x,p.z-player.z));}
  assert.ok(closest>=.49,closest);assert.ok(p.x>1,p.x);
 });
+test('larger body radii retain enough space while walkers pass each other',()=>{
+ const s=setup({safe:(p,x,z)=>Math.abs(z)<1}),a=ped(-3,0),b=ped(3,0,Math.PI);a.radius=b.radius=.36;let closest=Infinity;
+ for(let i=0;i<320;i++){s.run([a,b]);closest=Math.min(closest,Math.hypot(a.x-b.x,a.z-b.z));}assert.ok(closest>=.71,closest);assert.ok(a.x>1&&b.x<-1);
+});
 test('blocked paths wait or turn back and do not cross the supplied collision boundary',()=>{
  const s=setup({safe:(p,x,z)=>x<=1&&Math.abs(z)<.3}),p=ped(0,0);p.walk={path:[{x:0,z:0},{x:1,z:0},{x:2,z:0}],i:0,dir:1};
  s.run([p],[],300);assert.ok(p.x<=1&&Math.abs(p.z)<.3);assert.ok(Number.isFinite(p.a));

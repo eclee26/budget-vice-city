@@ -235,14 +235,14 @@ class PassengerJobs {
     if(!this.actor){
       this.actor=mkHuman({...PassengerJobs.outfits[0],height:HUMAN.passengerHeight});
       this.actor.g.visible=false;this.phase=0;
-      this.outfitParts={};for(const [channel,color]of Object.entries(PassengerJobs.outfits[0]))if(typeof color==='string'){this.outfitParts[channel]=[];this.actor.g.traverse(o=>{if(o.isMesh&&o.material===mat(color))this.outfitParts[channel].push(o);});}
+      this.outfitParts=Object.fromEntries(Object.entries(this.actor.paint).map(([channel,parts])=>[channel,parts.map(p=>p.mesh)]));
       this.belt=civicBar(this.actor.tor,[.15,.61,.22],[.15,.02,-.13],.045,mat('#222831'));this.belt.visible=false;
       this.visualLocal=new THREE.Vector3();
       this.labelCanvas=document.createElement('canvas');this.labelCanvas.width=256;this.labelCanvas.height=64;
       this.labelTexture=new THREE.CanvasTexture(this.labelCanvas);this.labelTexture.encoding=THREE.sRGBEncoding;
       const label=this.label=new THREE.Sprite(new THREE.SpriteMaterial({map:this.labelTexture,depthWrite:false,toneMapped:false}));label.position.set(0,2.25,0);label.scale.set(1.45,.36,1);this.actor.g.add(label);
     }
-    const outfit=PassengerJobs.outfits[Math.max(0,PassengerJobs.names.indexOf(name))];for(const [channel,parts]of Object.entries(this.outfitParts))for(const part of parts)part.material=mat(outfit[channel]);
+    const outfit=PassengerJobs.outfits[Math.max(0,PassengerJobs.names.indexOf(name))];setHumanPalette(this.actor,outfit);
     if(this.actor.longHair)this.actor.longHair.visible=outfit.long;
     const ctx=this.labelCanvas.getContext('2d');ctx.clearRect(0,0,256,64);ctx.fillStyle='#10202be8';ctx.fillRect(0,0,256,64);ctx.fillStyle='#ffd38a';ctx.textAlign='center';ctx.font='bold 30px sans-serif';ctx.fillText(name,128,43);this.labelTexture.needsUpdate=true;
   }

@@ -65,10 +65,10 @@ class AmbientPedestrians{
     for(const offset of[0,-.55,.55,-1.05,1.05,-1.57,1.57,Math.PI]){
       const a=heading+offset,dx=Math.cos(a),dz=Math.sin(a),x=p.x+dx*speed*dt,z=p.z+dz*speed*dt,look=.48+speed*.25;
       if(!this.world.safe(p,x,z)||!this.world.safe(p,p.x+dx*look,p.z+dz*look))continue;
-      if(cars.some(v=>{if(Math.hypot(v.x-p.x,v.z-p.z)>=v.t.L+3)return false;const gap=pedestrianVehicleDistance({x,z},v);return gap<.28&&gap<=pedestrianVehicleDistance(p,v)+1e-6;}))continue;
+      if(cars.some(v=>{if(Math.hypot(v.x-p.x,v.z-p.z)>=v.t.L+3)return false;const gap=pedestrianVehicleDistance({x,z},v);return gap<Math.max(.28,p.radius||0)&&gap<=pedestrianVehicleDistance(p,v)+1e-6;}))continue;
       let score=Math.abs(offset)*.22,clear=true;
       for(const other of neighbors){const distance=Math.hypot(x-other.x,z-other.z),old=Math.hypot(p.x-other.x,p.z-other.z);
-        if(distance<.5&&distance<old-1e-5){clear=false;break;}
+        if(distance<(p.radius||.25)+(other.radius||.25)&&distance<old-1e-5){clear=false;break;}
         const ahead=Math.hypot(p.x+dx*look-other.x,p.z+dz*look-other.z);score+=Math.max(0,1.05-ahead)**2*3;
       }
       if(!clear)continue;if(score<bestScore){best={x,z,a};bestScore=score;}if(score<.001)break;
@@ -85,7 +85,7 @@ class AmbientPedestrians{
         for(let i=0;i<parts;i++){const x=p.x+(state.knockX||0)*dt/parts,z=p.z+(state.knockZ||0)*dt/parts;if(!this.world.safe(p,x,z))break;p.x=x;p.z=z;}
         state.knockX=(state.knockX||0)*Math.pow(.9,dt*60);state.knockZ=(state.knockZ||0)*Math.pow(.9,dt*60);p.vx=p.vz=0;
         if(!p.dn){
-          if(this.world.safe(p,p.x,p.z)&&cars.every(v=>pedestrianVehicleDistance(p,v)>.3)){state.mode='recover';state.until=this.time+.9;state.nextEvent=this.time+15;}
+          if(this.world.safe(p,p.x,p.z)&&cars.every(v=>pedestrianVehicleDistance(p,v)>Math.max(.3,p.radius||0))){state.mode='recover';state.until=this.time+.9;state.nextEvent=this.time+15;}
           else if(this.world.canRelocate?.(p)&&this.world.relocate(p)!==false){state=this.reset(p);}
           else p.dn=30;
         }
@@ -94,7 +94,7 @@ class AmbientPedestrians{
       let threat=null,threatCar=null;
       for(const v of cars){
         const speed=Math.hypot(v.vx,v.vz);if(speed<2.5||Math.hypot(p.x-v.x,p.z-v.z)>v.t.L+speed*1.2+2)continue;
-        if(speed>4&&pedestrianVehicleDistance(p,v)<.24){this.release(p);state.mode='down';p.fl=0;p.dn=400;state.knockX=v.vx*1.4;state.knockZ=v.vz*1.4;p.vx=p.vz=0;this.world.collision(v,p);break;}
+        if(speed>4&&pedestrianVehicleDistance(p,v)<(p.radius||.24)){this.release(p);state.mode='down';p.fl=0;p.dn=400;state.knockX=v.vx*1.4;state.knockZ=v.vz*1.4;p.vx=p.vz=0;this.world.collision(v,p);break;}
         const risk=pedestrianVehicleThreat(p,v);if(risk&&(!threat||risk.time<threat.time)){threat=risk;threatCar=v;}
       }
       if(p.dn){this.stats.down++;this.world.pose(p,state,0,dt,this.time);continue;}
@@ -148,7 +148,7 @@ class PedestrianPopulation{
       const sites=this.nearby(focus,min,radius),sidewalk=sites.filter(s=>s.path),green=sites.filter(s=>!s.path);
       for(let attempt=0;attempt<128&&sites.length;attempt++){
         const preferred=this.world.random()<.85?sidewalk:green,pool=preferred.length?preferred:sites,site=pool[Math.floor(this.world.random()*pool.length)];
-        if(!initial&&!this.hidden(site,focus)||!this.world.safe(site))continue;
+        if(!initial&&!this.hidden(site,focus)||!this.world.safe(site,p))continue;
         if(peds.some(other=>other!==p&&Math.hypot(other.x-site.x,other.z-site.z)<1.15))continue;
         if(cars.some(v=>pedestrianVehicleDistance(site,v)<.5))continue;
         if(peds.filter(other=>other!==p&&Math.hypot(other.x-site.x,other.z-site.z)<8).length>=5)continue;

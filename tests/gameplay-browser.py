@@ -26,7 +26,7 @@ def route(request):
     if url.hostname=='game.test':
         if url.path in ['/','/index.html']: request.fulfill(body=source,content_type='text/html')
         elif url.path=='/live.html': request.fulfill(body=(root/'index.html').read_text(encoding='utf-8'),content_type='text/html')
-        elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/pedestrian-crowd.js','/pedestrian-ai.js','/vehicle-doors.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']: request.fulfill(body=(root/url.path[1:]).read_text(encoding='utf-8'),content_type='text/css' if url.path.endswith('.css') else 'text/javascript')
+        elif url.path in ['/multiplayer.js','/multiplayer.css','/gameplay.js','/open-world.js','/character-art.js','/pedestrian-crowd.js','/pedestrian-ai.js','/vehicle-doors.js','/world-streaming.js','/vehicle-dynamics.js','/structures.js','/traffic-signals.js','/world-detail.js','/driving.css']: request.fulfill(body=(root/url.path[1:]).read_text(encoding='utf-8'),content_type='text/css' if url.path.endswith('.css') else 'text/javascript')
         else: request.fulfill(status=204,body='')
     elif args.assets and (args.assets/Path(url.path).name).exists():
         request.fulfill(body=(args.assets/Path(url.path).name).read_text(encoding='utf-8'),content_type='text/javascript')

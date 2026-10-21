@@ -44,3 +44,6 @@ test('mobile replenishment can use hidden sites inside its shorter draw range',(
  const s=setup({drawRange:()=>65}),peds=[];for(let i=0;i<16;i++){const p=ped();peds.push(p);assert.ok(s.population.place(p,peds,[],{x:0,z:0}));assert.ok(Math.hypot(p.x,p.z)>=45);}
  assert.ok(peds.filter(p=>Math.hypot(p.x,p.z)<65).length>=8);
 });
+test('placement checks the selected resident body radius at the candidate site',()=>{
+ let checked=false;const s=setup({safe(site,resident){assert.equal(resident.radius,.35);checked=true;return true;}}),p=ped();p.radius=.35;assert.ok(s.population.place(p,[p],[],{x:0,z:0},{initial:true}));assert.ok(checked);
+});
