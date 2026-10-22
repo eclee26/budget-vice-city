@@ -4,7 +4,7 @@ A small open-world driving game that runs in the browser. It uses three.js with 
 
 ## Play
 
-For single-player and multiplayer, run `npm start` with Node.js 22+, then open `http://localhost:8000`. A plain static server can still run single-player. Keep all runtime files together. GitHub Pages can also serve the repository root; the current development branch is `work`.
+For single-player and multiplayer, run `npm start` with Node.js 22+, then open `http://localhost:8000`. A plain static server can still run single-player. Keep all runtime files together, including the `assets` and `vendor` folders. Open the HTTP address rather than double-clicking `index.html`: browser file restrictions block the imported car model. After updating a running Node server, restart it; rebuild Docker with `docker compose up -d --build` so the image includes the model. GitHub Pages can also serve the repository root; the current development branch is `work`.
 
 ## Controls
 

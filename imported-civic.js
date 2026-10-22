@@ -2,9 +2,29 @@
    Credits and the source asset's terms are recorded in THIRD_PARTY_ASSETS.md. */
 const ImportedCivic={
   name:'1999 Honda Civic Si',parts:null,promise:null,error:null,
+  async readModel(){
+    if(location.protocol==='file:')throw Error('Civic file URL');
+    this.url=new URL('assets/vehicles/1999_honda_civic_si.glb',document.baseURI).href;
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+    try{
+      const response=await fetch(this.url,{signal:controller.signal});
+      if(!response.ok)throw Error('Civic model HTTP '+response.status);
+      const buffer=await response.arrayBuffer();
+      if(buffer.byteLength<12||new DataView(buffer).getUint32(0,true)!==0x46546c67)throw Error('Civic response is not a GLB');
+      return buffer;
+    }catch(error){if(controller.signal.aborted)throw Error('Civic download timed out');throw error;}
+    finally{clearTimeout(timer);}
+  },
+  failureMessage(){
+    if(this.error==='Civic file URL')return 'To load the Civic, start the local game server and open http://localhost:8000. Opening index.html directly blocks model loading.';
+    if(/HTTP 404/.test(this.error))return 'The local server is missing the Civic model file (404). Restart the server or rebuild its Docker image, then reload.';
+    if(/not a GLB/.test(this.error))return 'The server returned a page instead of the Civic model. Check that assets/vehicles/1999_honda_civic_si.glb is included and served as a file.';
+    if(/timed out/.test(this.error))return 'Loading the Civic timed out. Check the local connection, then reload to retry.';
+    return 'The Civic model request failed. Check the model loading details in Menu → Vehicle. A simplified car is available.';
+  },
   load(){
     if(this.promise)return this.promise;
-    this.stage='loading';document.getElementById('boot-status').textContent='Loading the 1999 Civic Si…';this.promise=fetch('assets/vehicles/1999_honda_civic_si.glb',{signal:AbortSignal.timeout(15000)}).then(response=>{if(!response.ok)throw Error('Civic model HTTP '+response.status);return response.arrayBuffer();}).then(buffer=>{this.stage='decoding';return new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(Error('Civic model decoding timed out')),15000);new THREE.GLTFLoader().parse(buffer,'assets/vehicles/',value=>{clearTimeout(timeout);resolve(value);},error=>{clearTimeout(timeout);reject(error);});});}).then(gltf=>{
+    this.stage='loading';document.getElementById('boot-status').textContent='Loading the 1999 Civic Si…';this.promise=this.readModel().then(buffer=>{this.stage='decoding';return new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(Error('Civic model decoding timed out')),15000);new THREE.GLTFLoader().parse(buffer,new URL('./',this.url).href,value=>{clearTimeout(timeout);resolve(value);},error=>{clearTimeout(timeout);reject(error);});});}).then(gltf=>{
       this.stage='normalizing';const root=gltf.scene;root.updateMatrixWorld(true);
       const bounds=new THREE.Box3().setFromObject(root),size=bounds.getSize(new THREE.Vector3()),scale=4.45/size.z;
       // Source is centimetre-scaled twice, with its nose on +Z. Game cars face +X.

@@ -534,5 +534,5 @@
       cp.set(P.x-Math.cos(ca+yo)*8,4,P.z-Math.sin(ca+yo)*8);cam.position.copy(cp);cam.lookAt(P.x,1.5,P.z);this.lastSave=finite(data.savedAt)?data.savedAt:0;this.storageMessage='Your saved drive has been restored. Autosave is on.';
     }
   }
-  (async()=>{const ready=await ImportedCivic.load();for(const v of cars)if(v.t.imported)ImportedCivic.attach(v);gameplay=new DrivingGame();gameplay.init();if(!ready)gameplay.notify('The imported Civic model could not load. A simplified car is available; reload to retry.',true);})().catch(error=>{console.error(error);window.gameBoot?.fail();});
+  (async()=>{const ready=await ImportedCivic.load();for(const v of cars)if(v.t.imported)ImportedCivic.attach(v);gameplay=new DrivingGame();gameplay.init();if(!ready){const pane=document.getElementById('gp-vehicle'),status=document.createElement('p'),details=document.createElement('details'),summary=document.createElement('summary'),info=document.createElement('p');status.textContent=ImportedCivic.failureMessage();summary.textContent='Model loading details';info.textContent=(ImportedCivic.url||location.href)+' · '+ImportedCivic.error;details.append(summary,info);pane.append(status,details);gameplay.notify(status.textContent,true);}})().catch(error=>{console.error(error);window.gameBoot?.fail();});
 })();
