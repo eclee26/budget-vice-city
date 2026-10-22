@@ -225,3 +225,27 @@ Final targeted checks: the 18 physics tests now include the imported type in the
 A fresh real local Node HTTP server loads the full 11,334,168-byte GLB successfully; the original reported local URL was not supplied, so the exact cause in that environment is not confirmed. Added six loading checks for direct-file opening, HTTP 404, HTML catch-all responses, subdirectory paths, network failures and aborted downloads. Replaced the `AbortSignal.timeout` dependency with a controller/timer, preserving the download limit. Model-file validation now catches non-GLB responses before decoding.
 
 `tests/imported-civic-local-browser.cjs` passes real local HTTP loading with `AbortSignal.timeout` deliberately unavailable, then opens the real index file through `file://` and checks that the game stays playable with explicit localhost instructions. The Vehicle menu preserves the requested asset URL and exact failure cause for diagnosis. The project server was started at port 8000 and its health/model MIME endpoints verified.
+
+
+## Frame-cost optimization pass — 2026-10-22
+
+The user reported a drop from a previously stable 70 FPS to 25–40 FPS on High, 100% scale, 64 pedestrians and 24 traffic cars. The original 70 FPS condition has not been reproduced in the current test environment; these changes address measured costs without claiming the entire regression is diagnosed. Comparing the pre-mission `8ada353` build under the same controlled test did not show the mission code as the principal new cost.
+
+Changes retain the preset, scale, populations and imported Civic. Streamed instance batches receive cached aggregate spheres containing every transformed instance plus wind padding. A scoped r128 frustum hook uses those per-object bounds independently for camera and shadow passes; source geometries and GPU buffers remain shared. Static world/local character matrices stop being recomposed unnecessarily. Vehicle-pair broad-phase reaches are cached and refreshed after contacts, while retaining the original three-pass order and exact solver. Pedestrian/traffic proximity comparisons avoid unnecessary square roots. The fullscreen postprocessing output no longer requests redundant canvas MSAA; FXAA remains enabled and the direct-render fallback retains hardware AA. Paused scenes reuse the unchanged canvas, refresh on settings/actions/resize, and hidden tabs submit no graphics work. Cached paused callbacks do not inflate FPS.
+
+Matched controlled High/100% samples at 1280×800, 64 pedestrians and 24 traffic cars on the available GTX 1650:
+
+| Scene | Median frame cost before → after | Draw calls before → after | Two simulation ticks before → after |
+| --- | --- | --- | --- |
+| Coast | 32.2 → 26.8 ms (16.8% less) | 1,457 → 1,031 (29.2% fewer) | 13.0 → 10.7 ms |
+| Downtown | 31.7 → 24.2 ms (23.7% less) | 1,925 → 1,332 (30.8% fewer) | 11.2 → 8.8 ms |
+
+These controlled frame costs include an explicit GPU finish and must not be converted into claimed live FPS. The retained optimized coast sample has a 70 ms maximum frame, including a 48.8 ms simulation outlier; the maximum is not discarded. Reports: `frame-performance-baseline.json`, `frame-performance-optimized.json`, intermediate/profile reports and `.cpuprofile` files in `tests/artifacts`.
+
+Actual six-second 1280×720 RAF windows are mixed: High/coast 31.6 → 30.2 FPS, High/downtown 30.2 → 35.5 FPS, Low/downtown 48.5 → 55.2 FPS. Coast FPS has not improved reliably, and stable 70 FPS is not certified. Raw baseline, earlier-build and final samples remain in `live-world-performance-fps-*.json`. These headless desktop-GPU samples do not establish the user's interactive browser frame rate.
+
+Validation: four world views have zero changed pixels/channels with culling on/off and preserve shadows; main-view draw submissions fall 35.2% in that parity test. Canvas MSAA on/off with retained FXAA produces identical final pixels in the controlled scene; fallback AA is checked. The 35-scene collision differential check preserves all positions, velocities, yaw and impact order exactly. The combined rules/controller/physics/culling suite passes 94 checks. Crowd animation/color/pose parity, hidden neighborhood replenishment and pooled buffers pass. Repeated streaming tours retain 223 geometries and 83 textures over all three low-profile loops, with collision and terrain behavior preserved. Paused/hidden rendering, settings redraw and resume checks pass.
+
+User confirmation after refreshing the optimized local build at the same stated settings: **40–50 FPS**, up from the reported **25–40 FPS**. This confirms a practical improvement in that user's test, while remaining below the historical 70 FPS. Full desktop/touch gameplay, active RAF/pause-resume, loading failures and the imported-Civic browser suite also pass with no reported browser/shader errors. A multiplayer test now waits for the updated player state instead of assuming the next queued event contains it.
+
+Final checks: both multiplayer server tests pass. The repeated desktop/mobile-layout graphics-switch browser check retains 59 stable shader programs, preserves shadow release/restoration, and reports no shader errors; the first High switch still costs 80.8 ms in that sample.

@@ -33,7 +33,7 @@ if(!/^[a-z0-9-]+$/i.test(label))throw Error('Use a simple alphanumeric report la
   for(const quality of ['high','low','medium','high','low']){
    const result=live?await page.evaluate(quality=>new Promise(resolve=>{
     const frames=[],start=performance.now();let last=start;
-    const sample=now=>{frames.push(now-last);last=now;if(now-start<3000){requestAnimationFrame(sample);return;}const sorted=[...frames].sort((a,b)=>a-b);resolve({quality,applyMs,frames,maxFrameMs:Math.max(...frames),fps:frames.length*1000/(now-start),p95FrameMs:sorted[Math.floor(sorted.length*.95)],...graphicsStats()});};
+    const sample=now=>{graphics.frameDirty=true;frames.push(now-last);last=now;if(now-start<3000){requestAnimationFrame(sample);return;}const sorted=[...frames].sort((a,b)=>a-b);resolve({quality,applyMs,frames,maxFrameMs:Math.max(...frames),fps:frames.length*1000/(now-start),p95FrameMs:sorted[Math.floor(sorted.length*.95)],...graphicsStats()});};
     requestAnimationFrame(sample);gameplay.settings.quality=quality;gameplay.applySettings();const applyMs=performance.now()-start;
    }),quality):await page.evaluate(quality=>{
     graphicsStage=quality;const start=performance.now();gameplay.settings.quality=quality;gameplay.applySettings();const applyMs=performance.now()-start,frames=[];

@@ -4,7 +4,7 @@ function fixture(mode='success'){
  const disposed=[],targets=[];
  class Group{constructor(){this.children=[];}add(o){this.children.push(o);}}
  class Mesh{constructor(geometry,material){Object.assign(this,{geometry,material});}dispose(){disposed.push(this);}}
- const THREE={Group,InstancedMesh:Mesh,Matrix4:class{},Quaternion:class{},Vector3:class{}};
+ const THREE={Sphere:class{},Frustum:class{intersectsObject(){}},Group,InstancedMesh:Mesh,Matrix4:class{},Quaternion:class{},Vector3:class{}};
  const scene={children:[],add(o){this.children.push(o);},remove(o){this.children.splice(this.children.indexOf(o),1);}};
  const ctx=vm.createContext({THREE,Map,Set,performance});vm.runInContext(source+';globalThis.Streamer=WorldStreamer;',ctx);
  const streamer=new ctx.Streamer(scene),material={uuid:'material',dispose(){throw Error('Shared material disposed');}},geometry={attributes:{normal:{itemSize:3}},dispose(){throw Error('Shared geometry disposed');}};

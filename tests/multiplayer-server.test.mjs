@@ -27,7 +27,7 @@ test('room membership, authenticated state, global chat, isolation and bounded i
     const state={x:140,z:120,y:0,a:0,vx:1,vz:0,vehicle:'1999 Honda Civic Si'};
     assert.equal((await post('/api/state',{...state,x:null},alice.token)).status,400);
     assert.equal((await post('/api/state',{...state,name:'Impersonated'},alice.token)).status,200);
-    const players=await events('players');assert.equal(players.players.find(p=>p.id===alice.id).name,'Alice');assert.equal(players.players.find(p=>p.id===alice.id).state.vehicle,'1999 Honda Civic Si');
+    let players=await events('players');const stateDeadline=Date.now()+3000;while(!players.players.find(p=>p.id===alice.id)?.state){assert.ok(Date.now()<stateDeadline,'Updated player state arrives');players=await events('players');}assert.equal(players.players.find(p=>p.id===alice.id).name,'Alice');assert.equal(players.players.find(p=>p.id===alice.id).state.vehicle,'1999 Honda Civic Si');
     const chat=await post('/api/chat',{text:'<img src=x onerror=alert(1)> Hello everyone!'},alice.token);assert.equal(chat.status,200);
     const received=await events('chat');assert.equal(received.name,'Alice');assert.equal(received.text,chat.data.message.text);
     const outsideEvents=await stream(outsider.token);assert.ok(!(await outsideEvents('history')).some(m=>m.text.includes('Hello everyone')));

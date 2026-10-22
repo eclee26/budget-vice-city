@@ -1,4 +1,19 @@
 /* Shared planar contacts and four-wheel road support. No rendering dependencies. */
+let vehiclePairReach=new Float64Array(0);
+function resolveVehiclePairs(cars,previous,dt,onImpact){
+ if(vehiclePairReach.length<cars.length)vehiclePairReach=new Float64Array(cars.length);
+ const reach=v=>v.t.L*.6+Math.hypot(v.vx,v.vz)*dt;
+ for(let i=0;i<cars.length;i++)vehiclePairReach[i]=reach(cars[i]);
+ for(let pass=0;pass<3;pass++)for(let i=0;i<cars.length;i++)for(let j=i+1;j<cars.length;j++){
+  const A=cars[i],B=cars[j],dx=B.x-A.x,dz=B.z-A.z,radius=vehiclePairReach[i]+vehiclePairReach[j];
+  if(dx*dx+dz*dz>radius*radius)continue;
+  const impact=pass===0?sweepVehiclePair(A,B,previous[i],previous[j]):resolveVehicleContact(A,B);
+  // A contact may change speed, including a stationary car struck by another.
+  // Refresh both reaches before considering subsequent pairs in this pass.
+  if(impact>3)onImpact(A,B,impact);
+  vehiclePairReach[i]=reach(A);vehiclePairReach[j]=reach(B);
+ }
+}
 function vehicleCorners(v,x=v.x,z=v.z,a=v.a){
  const c=Math.cos(a),s=Math.sin(a),l=v.t.L/2,w=v.t.W/2;
  return [[l,w],[-l,w],[-l,-w],[l,-w]].map(([u,q])=>({x:x+c*u-s*q,z:z+s*u+c*q}));

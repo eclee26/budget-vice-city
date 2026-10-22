@@ -65,7 +65,7 @@ class AmbientPedestrians{
     for(const offset of[0,-.55,.55,-1.05,1.05,-1.57,1.57,Math.PI]){
       const a=heading+offset,dx=Math.cos(a),dz=Math.sin(a),x=p.x+dx*speed*dt,z=p.z+dz*speed*dt,look=.48+speed*.25;
       if(!this.world.safe(p,x,z)||!this.world.safe(p,p.x+dx*look,p.z+dz*look))continue;
-      if(cars.some(v=>{if(Math.hypot(v.x-p.x,v.z-p.z)>=v.t.L+3)return false;const gap=pedestrianVehicleDistance({x,z},v);return gap<Math.max(.28,p.radius||0)&&gap<=pedestrianVehicleDistance(p,v)+1e-6;}))continue;
+      if(cars.some(v=>{const dx=v.x-p.x,dz=v.z-p.z,range=v.t.L+3;if(dx*dx+dz*dz>=range*range)return false;const gap=pedestrianVehicleDistance({x,z},v);return gap<Math.max(.28,p.radius||0)&&gap<=pedestrianVehicleDistance(p,v)+1e-6;}))continue;
       let score=Math.abs(offset)*.22,clear=true;
       for(const other of neighbors){const distance=Math.hypot(x-other.x,z-other.z),old=Math.hypot(p.x-other.x,p.z-other.z);
         if(distance<(p.radius||.25)+(other.radius||.25)&&distance<old-1e-5){clear=false;break;}

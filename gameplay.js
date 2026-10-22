@@ -213,10 +213,12 @@
     frame(now) {
       this.sandbox.audio();this.multiplayer?.frame(now);
       if(now-this.populationCheck>=1000){this.populationCheck=now;this.applyPopulation();}
+      if(help.open||document.hidden){this.frameStart=0;this.frameCount=0;this.lastFrame=now;}else{
       if(this.lastFrame&&now-this.lastFrame>1000){this.frameStart=now;this.frameCount=0;}
       this.lastFrame=now;this.frameCount++;
       if(!this.frameStart)this.frameStart=now;
       if(now-this.frameStart>=700){if(this.settings.fps)$('fps-counter').textContent=`${Math.round(this.frameCount*1000/(now-this.frameStart))} FPS`;this.frameCount=0;this.frameStart=now;}
+      }
       if(this.noticeUntil&&now>=this.noticeUntil){$('game-notice').hidden=true;this.noticeUntil=0;}
     }
 
@@ -469,6 +471,7 @@
     }
 
     hud() {
+      graphics.frameDirty=true;
       this.sandbox?.hud();
       const label=CAMERA_VIEWS[camMode];$('camera-control').textContent=camMode===3?'POV':'Camera';$('camera-control').setAttribute('aria-label',label+'. Change camera view');$('camera-control').title='Camera: '+label+' (C)';
       this.navigationHud();const a=this.activity;$('activity-hud').hidden=!a;

@@ -91,15 +91,17 @@ const gardenHills=planGardenHills();
 const tile=(px,pz)=>{const i=Math.floor(px/T),j=Math.floor(pz/T);if(i<0||j<0||i>=N||j>=N)return 4;
  if(inMask(asphaltMask,px,pz))return 1;if(inMask(sidewalkMask,px,pz))return 0;const lot=structurePlan.ground.get(j*N+i);if(lot&&structurePaved(lot,px,pz))return 1;return m[j][i]},solid=(a,b)=>{const t=tile(a,b);return t==2||t==4||t==6||structureSolid(a,b)};
 // scene
-const S=new THREE.Scene();S.background=new THREE.Color('#e9b98f');S.fog=new THREE.Fog('#e9b98f',90,420);
-const cam=new THREE.PerspectiveCamera(65,1,.1,1000),r=new THREE.WebGLRenderer({antialias:true});r.domElement.id='world';document.body.prepend(r.domElement);
+const S=new THREE.Scene();S.matrixAutoUpdate=false;S.background=new THREE.Color('#e9b98f');S.fog=new THREE.Fog('#e9b98f',90,420);
+// The composer already applies FXAA; its final fullscreen quad needs no canvas MSAA.
+const postProcessingAvailable=!!(THREE.EffectComposer&&THREE.UnrealBloomPass&&THREE.ShaderPass);
+const cam=new THREE.PerspectiveCamera(65,1,.1,1000),r=new THREE.WebGLRenderer({antialias:!postProcessingAvailable});r.domElement.id='world';document.body.prepend(r.domElement);
 const graphics={mobile:navigator.maxTouchPoints>0||matchMedia('(any-pointer:coarse)').matches,anisotropy:Math.min(8,r.capabilities.getMaxAnisotropy())};
 const worldStream=new WorldStreamer(S);
 r.outputEncoding=THREE.sRGBEncoding;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=.55;r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;r.setPixelRatio(Math.min(devicePixelRatio,graphics.mobile?1.25:1.5));
 const SUN=new THREE.Vector3(-150,60,80).normalize();let sky=null,pm=null,es=null;
 if(THREE.Sky){sky=new THREE.Sky();sky.scale.setScalar(900);const u=sky.material.uniforms;u.turbidity.value=8;u.rayleigh.value=2.2;u.mieCoefficient.value=.003;u.mieDirectionalG.value=.85;u.sunPosition.value.copy(SUN);sky.material.fragmentShader=sky.material.fragmentShader.replace('gl_FragColor = vec4( retColor, 1.0 );',`float nightBlend=1.0-smoothstep(-.16,.04,vSunDirection.y);vec3 nightSky=mix(vec3(.012,.022,.045),vec3(.003,.007,.018),smoothstep(-.1,.8,direction.y));gl_FragColor=vec4(mix(retColor*.24,nightSky,nightBlend),1.0);`);
  pm=new THREE.PMREMGenerator(r);es=new THREE.Scene();S.add(sky);S.background=null}
-function rs(){r.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();if(comp)comp.setSize(innerWidth,innerHeight);if(aa)aa.uniforms.inverseResolution.value.set(1/(innerWidth*r.getPixelRatio()),1/(innerHeight*r.getPixelRatio()))}rs();onresize=rs;
+function rs(){graphics.frameDirty=true;r.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();if(comp)comp.setSize(innerWidth,innerHeight);if(aa)aa.uniforms.inverseResolution.value.set(1/(innerWidth*r.getPixelRatio()),1/(innerHeight*r.getPixelRatio()))}rs();onresize=rs;
 const hemi=new THREE.HemisphereLight('#cad9ea','#4a4037',.3);S.add(hemi);const sun=new THREE.DirectionalLight('#ffd2a1',2.4);S.add(sun,sun.target);
 sun.castShadow=true;sun.shadow.mapSize.set(graphics.mobile?1024:2048,graphics.mobile?1024:2048);Object.assign(sun.shadow.camera,{left:-48,right:48,top:48,bottom:-48,near:1,far:320});sun.shadow.bias=-.00008;sun.shadow.normalBias=.025;sun.shadow.radius=2;
 const lin=c=>new THREE.Color(c).convertSRGBToLinear(),mc={},mat=c=>mc[c]||(mc[c]=new THREE.MeshStandardMaterial({color:lin(c),roughness:.75})),box=new THREE.BoxGeometry(1,1,1);
@@ -711,7 +713,7 @@ function aiDrive(v){const A=v.ai,sp=Math.hypot(v.vx,v.vz),look=4+sp*.4,signalRul
  const fx=Math.cos(v.a),fz=Math.sin(v.a),horizon=Math.max(12,sp*1.1+sp*sp/9);let blocked=false;
  for(const o of obs)if(o!==v&&!o.dn){const dx=o.x-v.x,dz=o.z-v.z,along=dx*fx+dz*fz,lateral=Math.abs(dz*fx-dx*fz),otherLength=o.t?o.t.L:.6,otherWidth=o.t?o.t.W:.6,gap=along-(v.t.L+otherLength)*.5;
   if(along>0&&along<horizon&&lateral<(v.t.W+otherWidth)*.5+.3){const leader=Math.max(0,(o.vx||0)*fx+(o.vz||0)*fz),safe=2.5+sp*1.2;desired=Math.min(desired,Math.max(0,leader+(gap-safe)*.55));if(gap<safe)blocked=true}
-  const rvx=(o.vx||0)-v.vx,rvz=(o.vz||0)-v.vz,time=clamp(-(dx*rvx+dz*rvz)/(rvx*rvx+rvz*rvz+.001),0,1.8),separation=Math.hypot(dx+rvx*time,dz+rvz*time);if(along>1&&time>.15&&separation<(v.t.W+otherWidth)*.5+.65){desired=Math.min(desired,Math.max(0,(along-(v.t.L+otherLength)*.5-3)/2));blocked=true}
+  if(along>1){const rvx=(o.vx||0)-v.vx,rvz=(o.vz||0)-v.vz,time=clamp(-(dx*rvx+dz*rvz)/(rvx*rvx+rvz*rvz+.001),0,1.8),sx=dx+rvx*time,sz=dz+rvz*time,radius=(v.t.W+otherWidth)*.5+.65;if(time>.15&&sx*sx+sz*sz<radius*radius){desired=Math.min(desired,Math.max(0,(along-(v.t.L+otherLength)*.5-3)/2));blocked=true}}
  }
  const probe=Math.max(4,sp*.65);for(const lateral of[-v.t.W*.45,0,v.t.W*.45])if(solid(v.x+fx*probe-fz*lateral,v.z+fz*probe+fx*lateral)){desired=0;blocked=true}
  const throttle=clamp((desired-sp)*.28,0,.65),brake=desired<.1?Math.max(.4,clamp((sp-desired)*.4,0,1)):clamp((sp-desired)*.4,0,1),steer=clamp(Math.atan2(2*(v.t.wb||v.t.L*.62)*Math.sin(da),look)/(v.t.st||.55),-1,1);phys(v,throttle,brake,steer,false);
@@ -743,7 +745,7 @@ function mkHuman(o){const g=new THREE.Group(),sk=o.skin,H={g,paint:{},garment:o.
  if(H.garment==='jacket'){for(const side of[-1,1])humanClothLine(H,[.13,.22,.32,.42,.52,.60].map(y=>[y,side*.085*width]),o.shirt,-.28,.007,tor,depth,width);humanClothLine(H,[.13,.22,.32,.42,.52,.60].map(y=>[y,0]),o.shirt,.27,.008,tor,depth,width);}
  H.arms=[-1,1].map(side=>{const sh=gp(0,.64,side*.25*width,tor);sh.rotation.x=side*.07;part('shirt',HG.c,o.shirt,.067*depth,.3,.068*width,0,-.15,0,sh);const el=gp(0,-.3,0,sh),sleeved=['shirt','jacket'].includes(H.garment);
   part(sleeved?'shirt':'skin',HG.c,sleeved?o.shirt:sk,.049*depth,.27,.05*width,0,-.13,0,el);if(sleeved)part('shirt',HG.c,o.shirt,.052*depth,.035,.052*width,0,-.25,0,el,-.18);part('skin',HG.s,sk,.047,.06,.038,0,-.29,0,el);return{sh,el};});
- H.height=o.height||HUMAN.playerHeight;H.radius=.34*width*H.height/HUMAN.rigHeight;g.scale.setScalar(H.height/HUMAN.rigHeight);S.add(g);return H}
+ H.height=o.height||HUMAN.playerHeight;H.radius=.34*width*H.height/HUMAN.rigHeight;g.scale.setScalar(H.height/HUMAN.rigHeight);g.traverse(mesh=>{if(mesh.isMesh){mesh.updateMatrix();mesh.matrixAutoUpdate=false;}});S.add(g);return H}
 function anim(H,ph,amp,run,air){const s=Math.sin(ph);
  H.legs.forEach((l,i)=>{const d=i?-1:1;l.hip.rotation.z=air?.6:d*s*amp*.7;l.knee.rotation.z=air?-1.1:-Math.max(0,-d*Math.sin(ph+.7))*amp*1.3});
  H.arms.forEach((a,i)=>{const d=i?-1:1;a.sh.rotation.z=air?-.4:-d*s*amp*.6;a.el.rotation.z=run?1.4:.15+amp*.3});
@@ -1088,10 +1090,7 @@ function phys(v,ti,bi,si,hb){const oldAngle=v.a;const t=v.t,tl=tile(v.x,v.z),off
 function step(){const previousCars=cars.map(v=>({x:v.x,z:v.z,a:v.a}));trafficTick++;updateTrafficSignals();if(gameplay)gameplay.beforeStep();dayNight();const tr=clamp((pressed('d')?1:0)-(pressed('a')?1:0)+touch.x,-1,1);obs=car?cars.concat(peds):cars.concat(peds,[P]);if(gameplay?.story)obs.push(...gameplay.story.obstacles());
  for(const v of cars)gameplay?.transition?.v===v?phys(v,0,0,0,true):v==car?phys(v,pressed('w')?1:0,pressed('s')?1:0,tr,pressed(' ')):v.policeActive?gameplay.sandbox.drivePolice(v):v.ai?aiDrive(v):phys(v,0,0,0,1);
  // Contact impulses follow the rotated bodies, including angular inertia and friction.
- for(let pass=0;pass<3;pass++)for(let i=0;i<cars.length;i++)for(let j=i+1;j<cars.length;j++){
-  const A=cars[i],B=cars[j];if(Math.hypot(B.x-A.x,B.z-A.z)>(A.t.L+B.t.L)*.6+(Math.hypot(A.vx,A.vz)+Math.hypot(B.vx,B.vz))*DT)continue;
-  const impact=pass===0?sweepVehiclePair(A,B,previousCars[i],previousCars[j]):resolveVehicleContact(A,B);if(impact>3){hurt(A,impact);hurt(B,impact);sparks((A.x+B.x)/2,.7,(A.z+B.z)/2,impact);if(A===car||B===car)gameplay?.sandbox.collision(A===car?B:A,impact);}if((A===car||B===car)&&impact>4)shake=Math.min(1.5,impact/15);
- }
+ resolveVehiclePairs(cars,previousCars,DT,(A,B,impact)=>{hurt(A,impact);hurt(B,impact);sparks((A.x+B.x)/2,.7,(A.z+B.z)/2,impact);if(A===car||B===car)gameplay?.sandbox.collision(A===car?B:A,impact);if((A===car||B===car)&&impact>4)shake=Math.min(1.5,impact/15);});
  // Ambient intent, personal space and predictive traffic reactions.
  pedestrianAI.tick(peds,cars,car?null:P,DT,gameplay?.story?.obstacles()||[]);
  // player
@@ -1126,7 +1125,7 @@ function mini(){mm.save();mm.scale(mm.canvas.width/150,mm.canvas.height/150);mm.
  if(gameplay)gameplay.drawMini(mm,MS);
  mm.save();mm.translate(P.x*MS,P.z*MS);mm.rotate(P.a);mm.fillStyle='#f22';mm.strokeStyle='#fff';mm.beginPath();mm.moveTo(7,0);mm.lineTo(-4,-4.5);mm.lineTo(-4,4.5);mm.closePath();mm.fill();mm.stroke();mm.restore();mm.restore()}
 const cp=new THREE.Vector3(P.x-8,6,P.z);
-if(THREE.EffectComposer&&THREE.UnrealBloomPass&&THREE.ShaderPass){r.toneMapping=THREE.NoToneMapping;
+if(postProcessingAvailable){r.toneMapping=THREE.NoToneMapping;
  comp=new THREE.EffectComposer(r,new THREE.WebGLRenderTarget(innerWidth,innerHeight,{type:THREE.HalfFloatType}));comp.setPixelRatio(r.getPixelRatio());comp.setSize(innerWidth,innerHeight);
  comp.addPass(new THREE.RenderPass(S,cam));comp.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.28,.35,2.8));
  fin=new THREE.ShaderPass({uniforms:{tDiffuse:{value:null},ex:{value:1.05},blur:{value:0}},vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
@@ -1149,7 +1148,7 @@ let simLast=performance.now(),simAccumulator=0,simTime=0,miniLast=-Infinity;
 function advanceSimulation(now){const elapsed=Math.max(0,Math.min(.1,(now-simLast)/1000));simLast=now;
  if(help.open||document.hidden){simAccumulator=0;return}simAccumulator+=elapsed;
  while(simAccumulator+1e-9>=DT){if(gameplay)gameplay.captureVisual();step();updParts();simTime+=DT;ambient(simTime);simAccumulator=Math.max(0,simAccumulator-DT)}if(now-miniLast>=50){mini();miniLast=now}}
-(function loop(now=performance.now()){if(gameplay)gameplay.frame(now);advanceSimulation(now);gameAudio.update();if(gameplay){gameplay.interpolateVisual(simAccumulator/DT);gameplay.updatePovCabin();}updateHeadlights();gameplay?.multiplayer?.render();
+(function loop(now=performance.now()){if(gameplay)gameplay.frame(now);advanceSimulation(now);gameAudio.update();if(document.hidden||help.open&&!graphics.frameDirty){requestAnimationFrame(loop);return;}graphics.frameDirty=false;if(gameplay){gameplay.interpolateVisual(simAccumulator/DT);gameplay.updatePovCabin();}updateHeadlights();gameplay?.multiplayer?.render();
  if(comp){fin.uniforms.ex.value=.98+.32*night;const s=car?Math.hypot(car.vx,car.vz):0;fin.uniforms.blur.value=car&&camMode!==2&&camMode!==3&&(!gameplay||gameplay.settings.blur)?Math.min(1,Math.max(0,(s-18)/35))*.018:0;comp.render()}
  else{r.toneMappingExposure=.55+.4*night;r.render(S,cam)}if(gameplay)gameplay.restoreVisual();requestAnimationFrame(loop)})();
 </script>

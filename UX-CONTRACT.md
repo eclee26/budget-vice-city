@@ -73,3 +73,6 @@ Loading stays visible through registered city-material preparation. Readiness fo
 | --- | --- | --- |
 | Last Light story | `StoryMission` / `LastLightState` | Story tab shares the paused modal. Q/touch uses the same nearby on-foot interaction; ordered collect/load/drive/unload/handoff objectives cannot skip stages. A stopped eligible car is booked for cargo. Condition/time, failure, retry and first-completion-only payment persist locally. Existing activities/services cannot overlap the mission. |
 | Imported Civic | `ImportedCivic` / `DrivingGame` | GLB loads before game readiness; a failed optional asset leaves a simplified car playable. Existing vehicle entry/exit/driving/save/camera controls apply. Source cockpit replaces the generic cockpit in interior views. Find 1999 Civic Si marks the car's location and resumes play. Vehicle menu preserves source attribution and license links. |
+
+
+Rendering lifetime: the paused scene can reuse its existing canvas while the native menu remains interactive. Graphics changes, resize and HUD-triggered visual actions invalidate it; closing the menu resumes ordinary rendering. Hidden tabs submit no WebGL frames. FPS counting excludes cached paused/hidden callbacks. World instance culling uses conservative per-batch bounds and independent camera/shadow frusta, without removing collision data or changing populations.

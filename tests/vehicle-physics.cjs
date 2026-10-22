@@ -129,3 +129,18 @@ test('settled parked cars skip tyre solves and wake after an impact or relocatio
  v.vx=2;c.tick(v,0,0,0,true);assert.ok(calls>parkedCalls&&v.x>0);
  v.vx=v.vz=0;v.x+=10;const before=calls;c.tick(v,0,0,0,true);assert.ok(calls>before);
 });
+
+test('cached broad phase preserves the original three-pass contact results and impact order',()=>{
+ const c=model();let seed=781;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ for(let scene=0;scene<35;scene++){
+  const original=[],optimized=[];
+  for(let i=0;i<22;i++){const v=vehicle(c);Object.assign(v,{x:random()*50,z:random()*50,a:random()*Math.PI*2,vx:(random()-.5)*45,vz:(random()-.5)*45,yr:(random()-.5)*2});original.push(v);optimized.push({...v});}
+  const previous=original.map(v=>({x:v.x-v.vx/60,z:v.z-v.vz/60,a:v.a-v.yr/60})),a=[],b=[];
+  for(let pass=0;pass<3;pass++)for(let i=0;i<original.length;i++)for(let j=i+1;j<original.length;j++){
+   const A=original[i],B=original[j];if(Math.hypot(B.x-A.x,B.z-A.z)>(A.t.L+B.t.L)*.6+(Math.hypot(A.vx,A.vz)+Math.hypot(B.vx,B.vz))/60)continue;
+   const impact=pass===0?c.sweepVehiclePair(A,B,previous[i],previous[j]):c.resolveVehicleContact(A,B);if(impact>3)a.push([i,j,impact]);
+  }
+  c.resolveVehiclePairs(optimized,previous,1/60,(A,B,impact)=>b.push([optimized.indexOf(A),optimized.indexOf(B),impact]));
+  assert.deepEqual(b,a);for(let i=0;i<original.length;i++)for(const key of ['x','z','a','vx','vz','yr'])assert.equal(optimized[i][key],original[i][key],`scene ${scene}, car ${i}, ${key}`);
+ }
+});

@@ -112,3 +112,8 @@ Added a connected authored mission: meet Inez, choose a careful/urgent run, coll
 Imported the user-supplied blue 1999 Honda Civic Si without modifying the GLB. Normalize its axes and metre scale, animate four separate wheel assemblies and the source steering wheel, use its cockpit in first-person views, partition original door surfaces, calibrate lamp origins, retain save/multiplayer identity and provide a Vehicle-menu map locator. The model remains separate from the existing 1997 SiR. Added an optional-asset decode fallback and bounded loading, local loader/license files, attribution links and Docker asset packaging. Existing deterministic fixtures now poll readiness independently of their disabled animation loop.
 
 The overall subjective score remains 5.3/10. The visible car asset is substantially more detailed, but the rest of the world, character animation and mission staging still have major gaps.
+
+
+## 2026-10-22 — measured rendering and simulation optimization
+
+Added shared per-instance-batch bounds so r128 skips off-camera city geometry while independently retaining shadow casters. Reuse static local/world matrices, cache collision broad-phase reaches with exact contact-order validation, and avoid redundant proximity square roots. Keep FXAA while dropping unnecessary canvas multisampling for the fullscreen postprocessing result. Paused backgrounds render on demand; hidden tabs skip graphics work, and settings/actions still invalidate previews. High settings, populations and vehicle assets stay available. Matched frame-cost measurements improve, but live coast FPS remains unresolved and no return-to-70 claim is made.

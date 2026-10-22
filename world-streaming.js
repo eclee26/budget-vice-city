@@ -1,5 +1,19 @@
 /* Fixed-size procedural-world streaming. Collision data never unloads.
    Cells own instance buffers only; geometry/materials remain shared. */
+// Three r128 tests the source geometry bounds, which do not contain displaced
+// instances. Supply aggregate bounds per batch without cloning GPU geometry.
+const worldInstanceSphere=new THREE.Sphere(),worldIntersectsObject=THREE.Frustum.prototype.intersectsObject;
+THREE.Frustum.prototype.intersectsObject=function(object){
+  const bounds=object.isInstancedMesh&&object.userData.instanceBounds;
+  return bounds?this.intersectsSphere(worldInstanceSphere.copy(bounds).applyMatrix4(object.matrixWorld)):worldIntersectsObject.call(this,object);
+};
+function worldInstanceBounds(geometry,matrices,padding=2){
+  if(!geometry.boundingBox)geometry.computeBoundingBox();
+  const bounds=new THREE.Box3(),part=new THREE.Box3();
+  for(const matrix of matrices)bounds.union(part.copy(geometry.boundingBox).applyMatrix4(matrix));
+  // Includes small wind/vegetation shader displacement, beyond static vertices.
+  return bounds.expandByScalar(padding).getBoundingSphere(new THREE.Sphere());
+}
 class WorldStreamer {
   constructor(scene) {
     this.scene=scene;this.cells=new Map();this.cellSize=80;this.active=new Set();
@@ -47,12 +61,13 @@ class WorldStreamer {
   }
   load(cell) {
     if(cell.group)return;
-    const group=new THREE.Group();group.userData.worldChunk=cell.key;
+    const group=new THREE.Group();group.matrixAutoUpdate=false;group.userData.worldChunk=cell.key;
     for(const part of cell.parts.values()){
       const mesh=new THREE.InstancedMesh(part.geometry,part.material,part.matrices.length);
       for(let i=0;i<part.matrices.length;i++)mesh.setMatrixAt(i,part.matrices[i]);
-      // r128 instance bounds are not inferred from the instance matrices.
-      mesh.frustumCulled=false;mesh.castShadow=part.castShadow;mesh.receiveShadow=part.receiveShadow;group.add(mesh);
+      if(!part.bounds)part.bounds=worldInstanceBounds(part.geometry,part.matrices);
+      mesh.userData.instanceBounds=part.bounds;mesh.frustumCulled=true;mesh.updateMatrix();mesh.matrixAutoUpdate=false;
+      mesh.castShadow=part.castShadow;mesh.receiveShadow=part.receiveShadow;group.add(mesh);
     }
     cell.group=group;this.scene.add(group);this.active.add(cell);this.stats.loads++;this.stats.instanceBuffers+=group.children.length;
     this.stats.peakInstanceBuffers=Math.max(this.stats.peakInstanceBuffers,this.stats.instanceBuffers);

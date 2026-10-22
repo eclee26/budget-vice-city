@@ -4,16 +4,19 @@ Results describe this machine, not a universal hardware performance guarantee.
 from pathlib import Path
 from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright
-import json, os
+import json, os, argparse, subprocess
 
 root=Path(__file__).resolve().parents[1];artifacts=root/'tests'/'artifacts';artifacts.mkdir(exist_ok=True)
-source=(root/'index.html').read_text(encoding='utf-8').replace('<script>\nconst T=10','<script>\nlet liveSeed=2026;Math.random=()=>{liveSeed=(Math.imul(liveSeed,1664525)+1013904223)>>>0;return liveSeed/4294967296};\nconst T=10')
+parser=argparse.ArgumentParser();parser.add_argument('--label',default='current');parser.add_argument('--ref');parser.add_argument('--seconds',type=float,default=10);args=parser.parse_args()
+def read_source(name):
+    return subprocess.check_output(['git','show',f'{args.ref}:{name}'],cwd=root) if args.ref else (root/name).read_bytes()
+source=read_source('index.html').decode('utf-8').replace('<script>\nconst T=10','<script>\nlet liveSeed=2026;Math.random=()=>{liveSeed=(Math.imul(liveSeed,1664525)+1013904223)>>>0;return liveSeed/4294967296};\nconst T=10')
 def route(request):
     u=urlparse(request.request.url)
     if u.hostname=='game.test':
         if u.path=='/':request.fulfill(body=source,content_type='text/html')
         elif u.path=='/assets/vehicles/1999_honda_civic_si.glb':request.fulfill(body=(root/u.path[1:]).read_bytes(),content_type='model/gltf-binary')
-        elif u.path.endswith(('.js','.css')):request.fulfill(body=(root/u.path[1:]).read_bytes(),content_type='text/css' if u.path.endswith('.css') else 'text/javascript')
+        elif u.path.endswith(('.js','.css')):request.fulfill(body=read_source(u.path[1:]),content_type='text/css' if u.path.endswith('.css') else 'text/javascript')
         else:request.fulfill(status=204,body='')
     else:
         f=root/'.test-tools'/'cdn-cache'/Path(u.path).name
@@ -35,14 +38,14 @@ with sync_playwright() as p:
             }''',[quality,kind])
             # Warm-up is outside the measured window.
             page.wait_for_timeout(3000)
-            result=page.evaluate('''()=>new Promise(resolve=>{
+            result=page.evaluate('''seconds=>new Promise(resolve=>{
               const samples=[],start=performance.now();let last=start;
-              function sample(now){samples.push(now-last);last=now;if(now-start<10000){requestAnimationFrame(sample);return;}
+              function sample(now){samples.push(now-last);last=now;if(now-start<seconds*1000){requestAnimationFrame(sample);return;}
                 samples.sort((a,b)=>a-b);const gl=r.getContext(),ext=gl.getExtension('WEBGL_debug_renderer_info');
                 resolve({fps:samples.length*1000/(now-start),medianFrameMs:samples[Math.floor(samples.length*.5)],p95FrameMs:samples[Math.floor(samples.length*.95)],maxFrameMs:samples[samples.length-1],framesOver50Ms:samples.filter(n=>n>50).length,frames:samples.length,seconds:(now-start)/1000,renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),renderWidth:r.domElement.width,renderHeight:r.domElement.height,loadedCells:worldStream.active.size,geometries:r.info.memory.geometries,textures:r.info.memory.textures});
               }requestAnimationFrame(sample);
-            })''')
+            })''',args.seconds)
             result.update(quality=quality,scene=kind);results.append(result);print(json.dumps(result),flush=True)
         assert not errors,errors
-        (artifacts/'live-world-performance.json').write_text(json.dumps({'viewport':[1280,720],'samples':results,'browserErrors':errors},indent=2),encoding='utf-8')
+        (artifacts/f'live-world-performance-{args.label}.json').write_text(json.dumps({'viewport':[1280,720],'samples':results,'browserErrors':errors},indent=2),encoding='utf-8')
     finally:browser.close()
