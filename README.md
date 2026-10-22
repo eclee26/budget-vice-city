@@ -208,3 +208,7 @@ For your own Ubuntu server, run `docker compose up -d --build`. The default Comp
 
 
 Performance diagnostics: `node tests/frame-performance-browser.cjs label` records matched coast/downtown frame costs, draw submissions and simulation time; `--ref <commit>` compares earlier runtime sources without changing the checkout and `--profile` saves CPU traces. `tests/live-world-browser.py --label label --seconds 10` records actual RAF samples, with optional `--ref`. Keep other benchmark jobs stopped when comparing timings. `tests/world-culling-browser.cjs`, `tests/canvas-antialias-browser.cjs` and `tests/render-idle-browser.cjs` verify visual parity and paused/hidden rendering behavior. These use the existing local Playwright runtime/CDN test cache.
+
+### Additional imported Hondas
+
+The supplied 2012 Honda Civic Si Coupe and 2009 Honda Civic Type R FD2 Custom are parked along the starting coast. Open **Menu → Vehicle → Find** for either model to mark its location on the map. Both use their supplied GLB appearance, four animated wheels, working doors and the shared driving controls. Run the game through `npm start` so the model files can load. Credits and embedded licenses are in `THIRD_PARTY_ASSETS.md`.
